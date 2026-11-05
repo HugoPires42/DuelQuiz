@@ -5,11 +5,13 @@ import { isMuted, setMuted, playSound } from '../game/sounds';
 import { theme } from '../theme';
 
 interface Props {
+  profile?: { pseudo: string; tag: string } | null;
+  onProfile: () => void;
   onDuelThemes: () => void;
   onAllThemes: () => void;
 }
 
-export function HomeScreen({ onDuelThemes, onAllThemes }: Props) {
+export function HomeScreen({ profile, onProfile, onDuelThemes, onAllThemes }: Props) {
   const [soundOn, setSoundOn] = useState(!isMuted());
   const toggleSound = () => {
     const next = !soundOn;
@@ -21,6 +23,14 @@ export function HomeScreen({ onDuelThemes, onAllThemes }: Props) {
   return (
     <View style={styles.container}>
       <ThemedBackground />
+      {profile && (
+        <Pressable style={styles.profileChip} onPress={onProfile}>
+          <View style={styles.profileDot} />
+          <Text style={styles.profileTxt}>
+            {profile.pseudo}#{profile.tag}
+          </Text>
+        </Pressable>
+      )}
       <Pressable style={styles.soundToggle} onPress={toggleSound}>
         <View style={[styles.soundDot, { backgroundColor: soundOn ? theme.correct : theme.textDim }]} />
         <Text style={styles.soundTxt}>{soundOn ? 'Son activé' : 'Son coupé'}</Text>
@@ -68,6 +78,20 @@ function Rule({ text }: { text: string }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 },
+  profileChip: {
+    position: 'absolute',
+    top: 14,
+    left: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: theme.surface,
+  },
+  profileDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: theme.primary },
+  profileTxt: { color: theme.text, fontSize: 12, fontFamily: theme.fonts.bold },
   soundToggle: {
     position: 'absolute',
     top: 14,

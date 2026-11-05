@@ -3,21 +3,21 @@ import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
-// ⚠️ À REMPLACER par la config de ta console Firebase :
-//    Paramètres du projet (⚙️) → section « Tes applications » → app Web → SDK config.
+// Config lue depuis les variables d'environnement Expo (fichier .env.local,
+// NON versionné). Voir .env.example pour la liste des clés attendues.
 const firebaseConfig = {
-  apiKey: 'REMPLACE_MOI',
-  authDomain: 'REMPLACE_MOI',
-  projectId: 'REMPLACE_MOI',
-  storageBucket: 'REMPLACE_MOI',
-  messagingSenderId: 'REMPLACE_MOI',
-  appId: 'REMPLACE_MOI',
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
 };
 
 /** Vrai une fois la vraie config collée. Tant que c'est faux, l'app tourne
  *  normalement (jeu solo) et les fonctions réseau sont désactivées. */
 export const isFirebaseConfigured =
-  firebaseConfig.apiKey !== 'REMPLACE_MOI' && firebaseConfig.apiKey.length > 10;
+  typeof firebaseConfig.apiKey === 'string' && firebaseConfig.apiKey.length > 10;
 
 let app: FirebaseApp | null = null;
 let authInstance: Auth | null = null;

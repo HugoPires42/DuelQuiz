@@ -11,12 +11,14 @@ import {
 import { HomeScreen } from './src/screens/HomeScreen';
 import { CategoryScreen } from './src/screens/CategoryScreen';
 import { DuelScreen, Matchup } from './src/screens/DuelScreen';
+import { ProfileScreen } from './src/screens/ProfileScreen';
 import { categoryLabel, randomCategory } from './src/game/categories';
+import { ensureSignedIn, ensureProfile, Profile } from './src/account/account';
 import { initSounds } from './src/game/sounds';
 import { theme } from './src/theme';
 
 const useNative = Platform.OS !== 'web';
-type Screen = 'home' | 'theme' | 'duel';
+type Screen = 'home' | 'theme' | 'duel' | 'profile';
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -30,6 +32,7 @@ export default function App() {
   const [screen, setScreen] = useState<Screen>('home');
   const [categoryIds, setCategoryIds] = useState<string[] | undefined>(undefined);
   const [matchup, setMatchup] = useState<Matchup | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
 
   // Fondu enchaîné à chaque changement d'écran.
   const fade = useRef(new Animated.Value(0)).current;
@@ -41,6 +44,18 @@ export default function App() {
   // Initialise l'audio une fois.
   useEffect(() => {
     initSounds();
+  }, []);
+
+  // Compte local auto : connexion anonyme + profil, une fois au démarrage.
+  useEffect(() => {
+    (async () => {
+      try {
+        const uid = await ensureSignedIn();
+        if (uid) setProfile(await ensureProfile(uid));
+      } catch (e) {
+        console.warn('Bootstrap du compte échoué', e);
+      }
+    })();
   }, []);
 
   // Mode « Tous les thèmes » : toutes les catégories mélangées.
@@ -67,11 +82,19 @@ export default function App() {
       <StatusBar barStyle="light-content" />
       <Animated.View style={[styles.inner, { opacity: fade }]}>
         {screen === 'home' && (
-          <HomeScreen onDuelThemes={() => setScreen('theme')} onAllThemes={startAllThemes} />
+          <HomeScreen
+            profile={profile}
+            onProfile={() => setScreen('profile')}
+            onDuelThemes={() => setScreen('theme')}
+            onAllThemes={startAllThemes}
+          />
         )}
         {screen === 'theme' && <CategoryScreen onPick={pickYourTheme} onBack={() => setScreen('home')} />}
         {screen === 'duel' && (
           <DuelScreen categoryIds={categoryIds} matchup={matchup} onHome={() => setScreen('home')} />
+        )}
+        {screen === 'profile' && (
+          <ProfileScreen profile={profile} onBack={() => setScreen('home')} onChange={setProfile} />
         )}
       </Animated.View>
     </SafeAreaView>

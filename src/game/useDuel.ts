@@ -7,14 +7,15 @@ import { decideBotAnswer, BotDecision, DEFAULT_BOT } from './bot';
 // Déroulé d'une question :
 //  themeIntro (balayage du thème) → reading (question plein écran) →
 //  playing (question en haut + réponses) → reveal (feedback) → auto-avance.
-export type Phase = 'themeIntro' | 'reading' | 'playing' | 'reveal' | 'done';
+export type Phase = 'countdown' | 'themeIntro' | 'reading' | 'playing' | 'reveal' | 'done';
 
 const freshSide = (): Side => ({ score: 0, streak: 0, bestStreak: 0 });
 
 export function useDuel(totalQuestions = 7, categoryIds?: string[]) {
   const [questions, setQuestions] = useState<Question[]>(() => pickQuestions(totalQuestions, categoryIds));
   const [index, setIndex] = useState(0);
-  const [phase, setPhase] = useState<Phase>('themeIntro');
+  const [phase, setPhase] = useState<Phase>('countdown');
+  const [countdown, setCountdown] = useState(3);
   const [timeLeftMs, setTimeLeftMs] = useState(QUESTION_TIME_MS);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [outcome, setOutcome] = useState<RoundOutcome | null>(null);
@@ -122,11 +123,24 @@ export function useDuel(totalQuestions = 7, categoryIds?: string[]) {
     [clearTimers, startAnswering]
   );
 
-  // (Re)démarre la partie à chaque nouveau jeu de questions (mont + rejouer).
+  // (Re)démarre : compte à rebours de début de match à chaque jeu de questions.
   useEffect(() => {
-    beginQuestion(0);
+    clearTimers();
+    setCountdown(3);
+    setPhase('countdown');
     return () => clearTimers();
-  }, [beginQuestion, clearTimers]);
+  }, [questions, clearTimers]);
+
+  // Compte à rebours 3 → 2 → 1 → GO, puis lancement de la 1re question.
+  useEffect(() => {
+    if (phase !== 'countdown') return;
+    if (countdown < 0) {
+      beginQuestion(0);
+      return;
+    }
+    const t = setTimeout(() => setCountdown((c) => c - 1), countdown === 0 ? 650 : 700);
+    return () => clearTimeout(t);
+  }, [phase, countdown, beginQuestion]);
 
   // Auto-avance après la révélation (écrans synchronisés, pas de bouton).
   useEffect(() => {
@@ -166,6 +180,7 @@ export function useDuel(totalQuestions = 7, categoryIds?: string[]) {
 
   return {
     phase,
+    countdown,
     question: questions[index],
     questionNumber: index + 1,
     totalQuestions: questions.length,

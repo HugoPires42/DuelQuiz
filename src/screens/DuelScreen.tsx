@@ -8,6 +8,7 @@ import { playSound } from '../game/sounds';
 import { AnswerButton, AnswerState } from '../components/AnswerButton';
 import { ScoreBar } from '../components/ScoreBar';
 import { ThemeBanner } from '../components/ThemeBanner';
+import { Countdown } from '../components/Countdown';
 import { ThemedBackground } from '../components/ThemedBackground';
 import { ResultScreen } from './ResultScreen';
 import { theme } from '../theme';
@@ -61,6 +62,18 @@ export function DuelScreen({ categoryIds, onHome }: Props) {
     if (d.phase === 'themeIntro') playSound('swoosh');
   }, [d.phase]);
 
+  // Compte à rebours de début de match : tic sur 3-2-1, cloche de boxe sur GO.
+  useEffect(() => {
+    if (d.phase !== 'countdown') return;
+    if (d.countdown > 0) playSound('tick');
+    else if (d.countdown === 0) playSound('bell');
+  }, [d.phase, d.countdown]);
+
+  // Son de points qui se remplissent à la révélation.
+  useEffect(() => {
+    if (d.phase === 'reveal' && d.outcome && d.outcome.you.points > 0) playSound('points');
+  }, [d.phase, d.outcome]);
+
   // Tic du chrono sur les 3 dernières secondes (tant qu'on n'a pas répondu).
   const tickSecRef = useRef<number | null>(null);
   useEffect(() => {
@@ -96,6 +109,16 @@ export function DuelScreen({ categoryIds, onHome }: Props) {
 
   if (d.phase === 'done') {
     return <ResultScreen you={d.you} bot={d.bot} onRestart={d.onRestart} onHome={onHome} />;
+  }
+
+  if (d.phase === 'countdown') {
+    return (
+      <View style={styles.center}>
+        <ThemedBackground />
+        <Text style={styles.getReady}>Prépare-toi au combat…</Text>
+        <Countdown value={d.countdown} />
+      </View>
+    );
   }
 
   const q = d.question;
@@ -200,6 +223,8 @@ export function DuelScreen({ categoryIds, onHome }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, paddingHorizontal: 18, paddingTop: 10, paddingBottom: 16 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  getReady: { color: theme.textDim, fontSize: 20, fontFamily: theme.fonts.semiBold },
 
   progressWrap: { marginTop: 14 },
   progressHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },

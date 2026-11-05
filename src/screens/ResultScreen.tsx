@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { ThemedBackground } from '../components/ThemedBackground';
 import { theme } from '../theme';
 import { Side } from '../game/types';
 
@@ -18,6 +19,7 @@ export function ResultScreen({ you, bot, onRestart, onHome }: Props) {
 
   return (
     <View style={styles.container}>
+      <ThemedBackground />
       <Text style={[styles.verdict, { color: verdictColor }]}>{verdict}</Text>
 
       <View style={styles.scores}>

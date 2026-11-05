@@ -7,6 +7,7 @@ import { hapticSuccess, hapticError } from '../game/haptics';
 import { AnswerButton, AnswerState } from '../components/AnswerButton';
 import { ScoreBar } from '../components/ScoreBar';
 import { Countdown } from '../components/Countdown';
+import { ThemedBackground } from '../components/ThemedBackground';
 import { ResultScreen } from './ResultScreen';
 import { theme } from '../theme';
 
@@ -73,6 +74,7 @@ export function DuelScreen({ categoryIds, matchup, onHome }: Props) {
   if (d.phase === 'intro') {
     return (
       <View style={styles.center}>
+        <ThemedBackground categoryId={categoryIds ? categoryIds[0] : undefined} />
         <Text style={styles.matchup}>
           {matchup ? `${matchup.youLabel}   contre   ${matchup.botLabel}` : 'Tous les thèmes'}
         </Text>
@@ -91,6 +93,7 @@ export function DuelScreen({ categoryIds, matchup, onHome }: Props) {
 
   return (
     <View style={styles.container}>
+      <ThemedBackground categoryId={q.categoryId} />
       <ScoreBar
         you={{ name: 'Toi', score: d.you.score, streak: d.you.streak, color: theme.you }}
         bot={{ name: 'Robo', score: d.bot.score, streak: d.bot.streak, color: theme.bot }}

@@ -2,13 +2,16 @@ import { Category } from './types';
 
 // Thèmes jouables. Chaque joueur en choisit un dans le mode « Duel de thèmes ».
 export const CATEGORIES: Category[] = [
-  { id: 'geo', label: 'Géographie', color: '#26A69A' },
-  { id: 'hist', label: 'Histoire', color: '#8D6E63' },
-  { id: 'sci', label: 'Sciences', color: '#42A5F5' },
-  { id: 'sport', label: 'Sport', color: '#66BB6A' },
-  { id: 'arts', label: 'Arts & Culture', color: '#EC407A' },
-  { id: 'ent', label: 'Ciné & Divertissement', color: '#FFA726' },
+  { id: 'geo', label: 'Géographie', color: '#26A69A', neon: '#2DD4BF' },
+  { id: 'hist', label: 'Histoire', color: '#8D6E63', neon: '#F59E0B' },
+  { id: 'sci', label: 'Sciences', color: '#42A5F5', neon: '#38BDF8' },
+  { id: 'sport', label: 'Sport', color: '#66BB6A', neon: '#4ADE80' },
+  { id: 'arts', label: 'Arts & Culture', color: '#EC407A', neon: '#F472B6' },
+  { id: 'ent', label: 'Ciné & Divertissement', color: '#FFA726', neon: '#FB923C' },
 ];
+
+// Couleur néon par défaut (mode « Tous les thèmes », accueil…).
+export const NEON_DEFAULT = '#A78BFA';
 
 export function categoryById(id: string): Category | undefined {
   return CATEGORIES.find((c) => c.id === id);

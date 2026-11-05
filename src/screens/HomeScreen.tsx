@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { ThemedBackground } from '../components/ThemedBackground';
 import { theme } from '../theme';
 
 interface Props {
@@ -10,6 +11,7 @@ interface Props {
 export function HomeScreen({ onDuelThemes, onAllThemes }: Props) {
   return (
     <View style={styles.container}>
+      <ThemedBackground />
       <Text style={styles.logo}>QuizDuel</Text>
       <Text style={styles.tagline}>
         Défie le bot en 1 contre 1.{'\n'}Le plus rapide marque le plus de points.

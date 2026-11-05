@@ -1,7 +1,8 @@
 export interface Category {
   id: string;
   label: string;
-  color: string;
+  color: string; // couleur de la bordure / accent
+  neon: string; // couleur du fond néon thématique
 }
 
 export interface Question {

@@ -26,5 +26,5 @@ export function Countdown({ value }: { value: number }) {
 }
 
 const styles = StyleSheet.create({
-  count: { color: theme.primary, fontSize: 96, fontWeight: '900', marginTop: 8 },
+  count: { color: theme.primary, fontSize: 96, fontFamily: theme.fonts.black, marginTop: 8 },
 });

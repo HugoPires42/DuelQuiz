@@ -13,6 +13,14 @@ export const theme = {
   streak: '#FFB300',
   // Les 4 couleurs des boutons de réponse (style QuizUp)
   optionColors: ['#5C6BC0', '#26A69A', '#EC407A', '#FFA726'],
+  // Famille typographique (Poppins), chargée dans App.tsx
+  fonts: {
+    black: 'Poppins_900Black',
+    extraBold: 'Poppins_800ExtraBold',
+    bold: 'Poppins_700Bold',
+    semiBold: 'Poppins_600SemiBold',
+    medium: 'Poppins_500Medium',
+  },
 };
 
 export type Theme = typeof theme;

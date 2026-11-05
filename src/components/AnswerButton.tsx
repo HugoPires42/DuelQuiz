@@ -8,6 +8,7 @@ export type AnswerState = 'idle' | 'selected' | 'correct' | 'wrong' | 'dimmed';
 interface Props {
   label: string;
   colorIndex: number;
+  index: number; // position dans la grille (pour l'entrée en cascade)
   onPress: () => void;
   disabled?: boolean;
   state?: AnswerState;
@@ -15,22 +16,32 @@ interface Props {
 
 const useNative = Platform.OS !== 'web';
 
-export function AnswerButton({ label, colorIndex, onPress, disabled, state = 'idle' }: Props) {
-  const scale = useRef(new Animated.Value(1)).current;
+export function AnswerButton({ label, colorIndex, index, onPress, disabled, state = 'idle' }: Props) {
+  const enter = useRef(new Animated.Value(0)).current; // entrée en cascade au montage
+  const pop = useRef(new Animated.Value(1)).current; // pop bonne / mauvaise réponse
+
+  useEffect(() => {
+    Animated.timing(enter, {
+      toValue: 1,
+      duration: 260,
+      delay: index * 70,
+      useNativeDriver: useNative,
+    }).start();
+  }, [enter, index]);
 
   useEffect(() => {
     if (state === 'correct') {
       Animated.sequence([
-        Animated.timing(scale, { toValue: 1.04, duration: 120, useNativeDriver: useNative }),
-        Animated.spring(scale, { toValue: 1, friction: 4, useNativeDriver: useNative }),
+        Animated.timing(pop, { toValue: 1.06, duration: 130, useNativeDriver: useNative }),
+        Animated.spring(pop, { toValue: 1, friction: 4, useNativeDriver: useNative }),
       ]).start();
     } else if (state === 'wrong') {
       Animated.sequence([
-        Animated.timing(scale, { toValue: 0.97, duration: 80, useNativeDriver: useNative }),
-        Animated.spring(scale, { toValue: 1, friction: 4, useNativeDriver: useNative }),
+        Animated.timing(pop, { toValue: 0.95, duration: 90, useNativeDriver: useNative }),
+        Animated.spring(pop, { toValue: 1, friction: 4, useNativeDriver: useNative }),
       ]).start();
     }
-  }, [state, scale]);
+  }, [state, pop]);
 
   let bg = theme.optionColors[colorIndex % theme.optionColors.length];
   if (state === 'correct') bg = theme.correct;
@@ -43,7 +54,16 @@ export function AnswerButton({ label, colorIndex, onPress, disabled, state = 'id
   };
 
   return (
-    <Animated.View style={{ transform: [{ scale }] }}>
+    <Animated.View
+      style={{
+        width: '100%',
+        opacity: enter,
+        transform: [
+          { translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) },
+          { scale: pop },
+        ],
+      }}
+    >
       <Pressable
         onPress={handlePress}
         disabled={disabled}
@@ -51,7 +71,7 @@ export function AnswerButton({ label, colorIndex, onPress, disabled, state = 'id
           styles.btn,
           {
             backgroundColor: bg,
-            opacity: state === 'dimmed' ? 0.45 : pressed ? 0.85 : 1,
+            opacity: state === 'dimmed' ? 0.4 : pressed ? 0.85 : 1,
             borderWidth: state === 'selected' ? 3 : 0,
             borderColor: '#fff',
           },
@@ -65,12 +85,12 @@ export function AnswerButton({ label, colorIndex, onPress, disabled, state = 'id
 
 const styles = StyleSheet.create({
   btn: {
-    borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 16,
-    marginVertical: 6,
-    minHeight: 60,
+    borderRadius: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 12,
+    minHeight: 112,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  label: { color: '#fff', fontSize: 17, fontWeight: '700', textAlign: 'center' },
+  label: { color: '#fff', fontSize: 16, fontFamily: theme.fonts.bold, textAlign: 'center' },
 });

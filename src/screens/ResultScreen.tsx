@@ -48,15 +48,15 @@ function Column({ name, color, score, best }: { name: string; color: string; sco
 
 const styles = StyleSheet.create({
   container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 },
-  verdict: { fontSize: 40, fontWeight: '900', letterSpacing: 1 },
+  verdict: { fontSize: 42, fontFamily: theme.fonts.black, letterSpacing: 1 },
   scores: { flexDirection: 'row', alignItems: 'center', marginTop: 40, marginBottom: 48 },
   col: { alignItems: 'center', flex: 1 },
-  cName: { fontSize: 16, fontWeight: '800' },
-  cScore: { fontSize: 52, fontWeight: '900', color: theme.text },
-  cBest: { fontSize: 12, color: theme.textDim, marginTop: 4 },
+  cName: { fontSize: 16, fontFamily: theme.fonts.extraBold },
+  cScore: { fontSize: 52, fontFamily: theme.fonts.black, color: theme.text },
+  cBest: { fontSize: 12, color: theme.textDim, fontFamily: theme.fonts.medium, marginTop: 4 },
   dash: { color: theme.textDim, fontSize: 28, marginHorizontal: 8 },
   primary: { backgroundColor: theme.primary, paddingVertical: 16, paddingHorizontal: 64, borderRadius: 999 },
-  primaryTxt: { color: '#fff', fontSize: 18, fontWeight: '900', letterSpacing: 2 },
+  primaryTxt: { color: '#fff', fontSize: 18, fontFamily: theme.fonts.black, letterSpacing: 2 },
   secondary: { marginTop: 18, paddingVertical: 10, paddingHorizontal: 24 },
-  secondaryTxt: { color: theme.textDim, fontSize: 15, fontWeight: '700' },
+  secondaryTxt: { color: theme.textDim, fontSize: 15, fontFamily: theme.fonts.semiBold },
 });

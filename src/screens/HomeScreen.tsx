@@ -53,12 +53,12 @@ function Rule({ text }: { text: string }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 },
-  logo: { fontSize: 48, fontWeight: '900', color: theme.primary, letterSpacing: 1 },
-  tagline: { color: theme.textDim, fontSize: 16, textAlign: 'center', marginTop: 12, lineHeight: 22 },
+  logo: { fontSize: 50, fontFamily: theme.fonts.black, color: theme.primary, letterSpacing: 0.5 },
+  tagline: { color: theme.textDim, fontSize: 16, fontFamily: theme.fonts.medium, textAlign: 'center', marginTop: 12, lineHeight: 22 },
   rules: { marginTop: 32, alignSelf: 'stretch', gap: 14 },
   ruleRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: theme.primary },
-  ruleText: { color: theme.text, fontSize: 15, flex: 1 },
+  ruleText: { color: theme.text, fontSize: 15, fontFamily: theme.fonts.medium, flex: 1 },
 
   modes: { marginTop: 40, alignSelf: 'stretch', alignItems: 'center' },
   primary: {
@@ -68,7 +68,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     alignItems: 'center',
   },
-  primaryTxt: { color: '#fff', fontSize: 18, fontWeight: '900', letterSpacing: 1 },
+  primaryTxt: { color: '#fff', fontSize: 18, fontFamily: theme.fonts.black, letterSpacing: 1 },
   secondary: {
     marginTop: 20,
     paddingVertical: 16,
@@ -78,6 +78,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: theme.surfaceAlt,
   },
-  secondaryTxt: { color: theme.text, fontSize: 16, fontWeight: '900', letterSpacing: 1 },
-  modeHint: { color: theme.textDim, fontSize: 12, marginTop: 8, textAlign: 'center' },
+  secondaryTxt: { color: theme.text, fontSize: 16, fontFamily: theme.fonts.extraBold, letterSpacing: 1 },
+  modeHint: { color: theme.textDim, fontSize: 12, fontFamily: theme.fonts.medium, marginTop: 8, textAlign: 'center' },
 });

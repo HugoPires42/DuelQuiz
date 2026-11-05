@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Platform, View, Text, Pressable, StyleSheet } from 'react-native';
 import { useDuel } from '../game/useDuel';
 import { QUESTION_TIME_MS } from '../game/scoring';
@@ -30,17 +30,8 @@ export function DuelScreen({ categoryIds, matchup, onHome }: Props) {
   const cardAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     cardAnim.setValue(0);
-    Animated.timing(cardAnim, { toValue: 1, duration: 280, useNativeDriver: useNative }).start();
+    Animated.timing(cardAnim, { toValue: 1, duration: 300, useNativeDriver: useNative }).start();
   }, [d.questionNumber, cardAnim]);
-
-  // Apparition des réponses (après le temps de lecture).
-  const answersAnim = useRef(new Animated.Value(0)).current;
-  useEffect(() => {
-    if (d.phase === 'playing') {
-      answersAnim.setValue(0);
-      Animated.timing(answersAnim, { toValue: 1, duration: 220, useNativeDriver: useNative }).start();
-    }
-  }, [d.phase, answersAnim]);
 
   // Apparition du bloc révélation.
   const revealAnim = useRef(new Animated.Value(0)).current;
@@ -50,6 +41,22 @@ export function DuelScreen({ categoryIds, matchup, onHome }: Props) {
       Animated.spring(revealAnim, { toValue: 1, friction: 6, useNativeDriver: useNative }).start();
     }
   }, [d.phase, revealAnim]);
+
+  // Animation de série : « SÉRIE ×N » qui jaillit quand le joueur enchaîne.
+  const streakAnim = useRef(new Animated.Value(0)).current;
+  const [streakShown, setStreakShown] = useState<number | null>(null);
+  useEffect(() => {
+    if (d.phase === 'reveal' && d.outcome?.you.correct && d.you.streak >= 2) {
+      setStreakShown(d.you.streak);
+      streakAnim.setValue(0);
+      Animated.sequence([
+        Animated.spring(streakAnim, { toValue: 1, friction: 5, useNativeDriver: useNative }),
+        Animated.delay(650),
+        Animated.timing(streakAnim, { toValue: 0, duration: 320, useNativeDriver: useNative }),
+      ]).start(() => setStreakShown(null));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [d.phase, d.outcome]);
 
   // Retour haptique à la révélation (mobile uniquement).
   useEffect(() => {
@@ -77,7 +84,6 @@ export function DuelScreen({ categoryIds, matchup, onHome }: Props) {
 
   const q = d.question;
   const cat = categoryById(q.categoryId);
-  const reading = d.phase === 'reading';
   const revealed = d.phase === 'reveal';
   const showAnswers = d.phase === 'playing' || revealed;
   const timePct = Math.max(0, Math.min(1, d.timeLeftMs / QUESTION_TIME_MS));
@@ -116,22 +122,8 @@ export function DuelScreen({ categoryIds, matchup, onHome }: Props) {
         </View>
       </Animated.View>
 
-      {reading && (
-        <View style={styles.readingHint}>
-          <Text style={styles.readingTxt}>Lis la question…</Text>
-        </View>
-      )}
-
       {showAnswers && (
-        <Animated.View
-          style={[
-            styles.answers,
-            {
-              opacity: answersAnim,
-              transform: [{ translateY: answersAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }],
-            },
-          ]}
-        >
+        <View style={styles.grid}>
           {q.options.map((opt, i) => {
             let state: AnswerState = 'idle';
             if (revealed && d.outcome) {
@@ -142,17 +134,19 @@ export function DuelScreen({ categoryIds, matchup, onHome }: Props) {
               state = 'selected';
             }
             return (
-              <AnswerButton
-                key={i}
-                label={opt}
-                colorIndex={i}
-                state={state}
-                disabled={revealed || d.selectedIndex !== null}
-                onPress={() => d.onSelect(i)}
-              />
+              <View key={i} style={styles.cell}>
+                <AnswerButton
+                  label={opt}
+                  colorIndex={i}
+                  index={i}
+                  state={state}
+                  disabled={revealed || d.selectedIndex !== null}
+                  onPress={() => d.onSelect(i)}
+                />
+              </View>
             );
           })}
-        </Animated.View>
+        </View>
       )}
 
       {revealed && d.outcome && (
@@ -167,8 +161,23 @@ export function DuelScreen({ categoryIds, matchup, onHome }: Props) {
             <PointTag label="Robo" pts={d.outcome.bot.points} color={theme.bot} time={d.outcome.bot.timeMs} />
           </View>
           <Pressable style={({ pressed }) => [styles.next, pressed && { opacity: 0.85 }]} onPress={d.onNext}>
-            <Text style={styles.nextTxt}>{last ? 'Voir le résultat →' : 'Continuer →'}</Text>
+            <Text style={styles.nextTxt}>{last ? 'Voir le résultat' : 'Continuer'}</Text>
           </Pressable>
+        </Animated.View>
+      )}
+
+      {streakShown != null && (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.streakBurst,
+            {
+              opacity: streakAnim,
+              transform: [{ scale: streakAnim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }],
+            },
+          ]}
+        >
+          <Text style={styles.streakBurstTxt}>SÉRIE ×{streakShown}</Text>
         </Animated.View>
       )}
     </View>
@@ -190,29 +199,38 @@ function PointTag({ label, pts, color, time }: { label: string; pts: number; col
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 18 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  matchup: { color: theme.textDim, fontSize: 15, fontWeight: '700', marginBottom: 10, textAlign: 'center' },
-  getReady: { color: theme.textDim, fontSize: 20, fontWeight: '700' },
+  matchup: { color: theme.textDim, fontSize: 15, fontFamily: theme.fonts.bold, marginBottom: 10, textAlign: 'center' },
+  getReady: { color: theme.textDim, fontSize: 20, fontFamily: theme.fonts.semiBold },
 
   progressWrap: { marginTop: 18 },
-  qnum: { color: theme.textDim, fontSize: 13, fontWeight: '700', marginBottom: 6 },
+  qnum: { color: theme.textDim, fontSize: 13, fontFamily: theme.fonts.semiBold, marginBottom: 6 },
   timerTrack: { height: 8, borderRadius: 4, backgroundColor: theme.surfaceAlt, overflow: 'hidden' },
   timerFill: { height: '100%', borderRadius: 4 },
 
   qCard: { backgroundColor: theme.surface, borderRadius: 18, padding: 20, marginTop: 18 },
-  category: { color: theme.primary, fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
-  prompt: { color: theme.text, fontSize: 21, fontWeight: '800', marginTop: 8, lineHeight: 28 },
+  category: { color: theme.primary, fontSize: 12, fontFamily: theme.fonts.extraBold, textTransform: 'uppercase', letterSpacing: 1 },
+  prompt: { color: theme.text, fontSize: 22, fontFamily: theme.fonts.extraBold, marginTop: 8, lineHeight: 30 },
 
-  readingHint: { marginTop: 24, alignItems: 'center' },
-  readingTxt: { color: theme.textDim, fontSize: 15, fontWeight: '700' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 18 },
+  cell: { width: '48%', marginBottom: 14 },
 
-  answers: { marginTop: 18 },
-
-  reveal: { marginTop: 8 },
+  reveal: { marginTop: 4 },
   pointsRow: { flexDirection: 'row', justifyContent: 'space-around', marginBottom: 12 },
   pointTag: { alignItems: 'center' },
-  pointLabel: { fontSize: 13, fontWeight: '800' },
-  pointVal: { fontSize: 26, fontWeight: '900' },
-  pointTime: { color: theme.textDim, fontSize: 12 },
+  pointLabel: { fontSize: 13, fontFamily: theme.fonts.extraBold },
+  pointVal: { fontSize: 26, fontFamily: theme.fonts.black },
+  pointTime: { color: theme.textDim, fontSize: 12, fontFamily: theme.fonts.medium },
   next: { backgroundColor: theme.primary, borderRadius: 999, paddingVertical: 15, alignItems: 'center' },
-  nextTxt: { color: '#fff', fontSize: 17, fontWeight: '900', letterSpacing: 1 },
+  nextTxt: { color: '#fff', fontSize: 17, fontFamily: theme.fonts.black, letterSpacing: 1 },
+
+  streakBurst: { position: 'absolute', top: '40%', left: 0, right: 0, alignItems: 'center' },
+  streakBurstTxt: {
+    color: theme.streak,
+    fontSize: 36,
+    fontFamily: theme.fonts.black,
+    letterSpacing: 1,
+    textShadowColor: 'rgba(0,0,0,0.35)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
+  },
 });

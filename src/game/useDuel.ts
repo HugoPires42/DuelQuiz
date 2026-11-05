@@ -62,15 +62,21 @@ export function useDuel(totalQuestions = 7, categoryIds?: string[]) {
     const yr = computePoints({ correct: youCorrect, timeMs: ya ? ya.timeMs : QUESTION_TIME_MS, currentStreak: youRef.current.streak });
     const br = computePoints({ correct: botCorrect, timeMs: ba ? ba.timeMs : QUESTION_TIME_MS, currentStreak: botRef.current.streak });
 
-    youRef.current = { score: youRef.current.score + yr.points, streak: yr.newStreak, bestStreak: Math.max(youRef.current.bestStreak, yr.newStreak) };
-    botRef.current = { score: botRef.current.score + br.points, streak: br.newStreak, bestStreak: Math.max(botRef.current.bestStreak, br.newStreak) };
+    // Dernière question : points doublés (permet un comeback sur un match serré).
+    const isLast = indexRef.current === questions.length - 1;
+    const mult = isLast ? 2 : 1;
+    const yPts = yr.points * mult;
+    const bPts = br.points * mult;
+
+    youRef.current = { score: youRef.current.score + yPts, streak: yr.newStreak, bestStreak: Math.max(youRef.current.bestStreak, yr.newStreak) };
+    botRef.current = { score: botRef.current.score + bPts, streak: br.newStreak, bestStreak: Math.max(botRef.current.bestStreak, br.newStreak) };
 
     setYou({ ...youRef.current });
     setBot({ ...botRef.current });
     setOutcome({
       correctIndex: q.correctIndex,
-      you: { answerIndex: ya ? ya.index : null, correct: youCorrect, points: yr.points, timeMs: ya ? ya.timeMs : null },
-      bot: { answerIndex: ba ? ba.decision.answerIndex : null, correct: botCorrect, points: br.points, timeMs: ba ? ba.timeMs : null },
+      you: { answerIndex: ya ? ya.index : null, correct: youCorrect, points: yPts, timeMs: ya ? ya.timeMs : null },
+      bot: { answerIndex: ba ? ba.decision.answerIndex : null, correct: botCorrect, points: bPts, timeMs: ba ? ba.timeMs : null },
     });
     setPhase('reveal');
   }, [questions]);

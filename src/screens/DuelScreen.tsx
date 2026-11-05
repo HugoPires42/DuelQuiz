@@ -12,6 +12,7 @@ import { ResultScreen } from './ResultScreen';
 import { theme } from '../theme';
 
 const useNative = Platform.OS !== 'web';
+const fmt = (p: number) => (p > 0 ? `+${p}` : '0');
 
 export interface Matchup {
   youLabel: string;
@@ -28,9 +29,8 @@ export function DuelScreen({ categoryIds, onHome }: Props) {
   const d = useDuel(7, categoryIds);
 
   const qT = useRef(new Animated.Value(0)).current; // 0 = lecture (grand/centré) → 1 = réponse (en haut)
-  const chrome = useRef(new Animated.Value(0)).current; // score + progression + réponses
+  const chrome = useRef(new Animated.Value(0)).current;
 
-  // Morph question (lecture → réponse) + apparition du « chrome ».
   useEffect(() => {
     if (d.phase === 'themeIntro' || d.phase === 'reading') {
       qT.setValue(0);
@@ -75,12 +75,26 @@ export function DuelScreen({ categoryIds, onHome }: Props) {
   const neon = cat?.neon ?? theme.primary;
   const label = cat?.label ?? '';
   const revealed = d.phase === 'reveal';
-  const feedback = d.selectedIndex != null || revealed; // feedback dès qu'on répond
+  const feedback = d.selectedIndex != null || revealed;
   const showAnswers = d.phase === 'playing' || revealed;
+  const isLast = d.questionNumber === d.totalQuestions;
   const timePct = Math.max(0, Math.min(1, d.timeLeftMs / QUESTION_TIME_MS));
 
   const translateY = qT.interpolate({ inputRange: [0, 1], outputRange: [240, 0] });
   const scale = qT.interpolate({ inputRange: [0, 1], outputRange: [1.12, 1] });
+
+  const cellState = (i: number): AnswerState => {
+    if (!feedback) return 'idle';
+    if (i === q.correctIndex) return 'correct';
+    if (i === d.selectedIndex) return 'wrong';
+    return 'dimmed';
+  };
+
+  const renderCell = (i: number) => (
+    <View key={i} style={styles.cell}>
+      <AnswerButton label={q.options[i]} neonColor={neon} state={cellState(i)} disabled={feedback} onPress={() => d.onSelect(i)} />
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -95,9 +109,12 @@ export function DuelScreen({ categoryIds, onHome }: Props) {
           bot={{ name: 'Robo', score: d.bot.score, streak: d.bot.streak, color: theme.bot }}
         />
         <View style={styles.progressWrap}>
-          <Text style={styles.qnum}>
-            Question {d.questionNumber}/{d.totalQuestions}
-          </Text>
+          <View style={styles.progressHead}>
+            <Text style={styles.qnum}>
+              Question {d.questionNumber}/{d.totalQuestions}
+            </Text>
+            {isLast && <Text style={styles.doubleBadge}>DERNIÈRE · POINTS ×2</Text>}
+          </View>
           <View style={styles.timerTrack}>
             <View style={[styles.timerFill, { width: `${timePct * 100}%`, backgroundColor: timePct < 0.3 ? theme.wrong : neon }]} />
           </View>
@@ -114,41 +131,37 @@ export function DuelScreen({ categoryIds, onHome }: Props) {
         </Animated.View>
       )}
 
-      {/* Réponses (néon de la couleur du thème) + feedback instantané */}
+      {/* Réponses : 2 lignes qui remplissent la hauteur, néon de la couleur du thème */}
       {showAnswers && (
         <Animated.View style={[styles.answersWrap, { opacity: chrome }]}>
-          <View style={styles.grid}>
-            {q.options.map((opt, i) => {
-              let state: AnswerState = 'idle';
-              if (feedback) {
-                if (i === q.correctIndex) state = 'correct';
-                else if (i === d.selectedIndex) state = 'wrong';
-                else state = 'dimmed';
-              }
-              return (
-                <View key={i} style={styles.cell}>
-                  <AnswerButton label={opt} neonColor={neon} state={state} disabled={feedback} onPress={() => d.onSelect(i)} />
-                </View>
-              );
-            })}
+          <View style={styles.row}>
+            {renderCell(0)}
+            {renderCell(1)}
           </View>
-
-          {revealed && d.outcome && (
-            <View style={styles.pointsRow}>
-              <PointTag label="Toi" pts={d.outcome.you.points} color={theme.you} time={d.outcome.you.timeMs} />
-              <PointTag label="Robo" pts={d.outcome.bot.points} color={theme.bot} time={d.outcome.bot.timeMs} />
-            </View>
-          )}
+          <View style={styles.row}>
+            {renderCell(2)}
+            {renderCell(3)}
+          </View>
         </Animated.View>
+      )}
+
+      {/* Points de la manche (incrustation, n'affecte pas la taille des cases) */}
+      {revealed && d.outcome && (
+        <View style={styles.pointsOverlay} pointerEvents="none">
+          <View style={styles.pointsPill}>
+            <Text style={styles.pointsTxt}>
+              <Text style={{ color: theme.you }}>Toi {fmt(d.outcome.you.points)}</Text>
+              <Text style={{ color: theme.textDim }}>{'    ·    '}</Text>
+              <Text style={{ color: theme.bot }}>Robo {fmt(d.outcome.bot.points)}</Text>
+            </Text>
+          </View>
+        </View>
       )}
 
       {streakShown != null && (
         <Animated.View
           pointerEvents="none"
-          style={[
-            styles.streakBurst,
-            { opacity: streakAnim, transform: [{ scale: streakAnim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }] },
-          ]}
+          style={[styles.streakBurst, { opacity: streakAnim, transform: [{ scale: streakAnim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }] }]}
         >
           <Text style={styles.streakBurstTxt}>SÉRIE ×{streakShown}</Text>
         </Animated.View>
@@ -157,21 +170,24 @@ export function DuelScreen({ categoryIds, onHome }: Props) {
   );
 }
 
-function PointTag({ label, pts, color, time }: { label: string; pts: number; color: string; time: number | null }) {
-  return (
-    <View style={styles.pointTag}>
-      <Text style={[styles.pointLabel, { color }]}>{label}</Text>
-      <Text style={[styles.pointVal, { color: pts > 0 ? theme.correct : theme.wrong }]}>{pts > 0 ? `+${pts}` : '0'}</Text>
-      <Text style={styles.pointTime}>{time != null ? `${(time / 1000).toFixed(1)}s` : '—'}</Text>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: 18, paddingTop: 10 },
+  container: { flex: 1, paddingHorizontal: 18, paddingTop: 10, paddingBottom: 16 },
 
   progressWrap: { marginTop: 14 },
-  qnum: { color: theme.textDim, fontSize: 13, fontFamily: theme.fonts.semiBold, marginBottom: 6 },
+  progressHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  qnum: { color: theme.textDim, fontSize: 13, fontFamily: theme.fonts.semiBold },
+  doubleBadge: {
+    color: theme.accent,
+    fontSize: 11,
+    fontFamily: theme.fonts.black,
+    letterSpacing: 0.5,
+    borderWidth: 1,
+    borderColor: theme.accent,
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 2,
+    overflow: 'hidden',
+  },
   timerTrack: { height: 8, borderRadius: 4, backgroundColor: theme.surfaceAlt, overflow: 'hidden' },
   timerFill: { height: '100%', borderRadius: 4 },
 
@@ -179,17 +195,15 @@ const styles = StyleSheet.create({
   category: { fontSize: 12, fontFamily: theme.fonts.extraBold, textTransform: 'uppercase', letterSpacing: 1 },
   prompt: { color: theme.text, fontSize: 23, fontFamily: theme.fonts.extraBold, marginTop: 8, lineHeight: 31 },
 
-  answersWrap: { marginTop: 16 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  cell: { width: '48%', marginBottom: 14 },
+  answersWrap: { flex: 1, marginTop: 14 },
+  row: { flexDirection: 'row', flex: 1 },
+  cell: { flex: 1, margin: 6 },
 
-  pointsRow: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 2 },
-  pointTag: { alignItems: 'center' },
-  pointLabel: { fontSize: 13, fontFamily: theme.fonts.extraBold },
-  pointVal: { fontSize: 26, fontFamily: theme.fonts.black },
-  pointTime: { color: theme.textDim, fontSize: 12, fontFamily: theme.fonts.medium },
+  pointsOverlay: { position: 'absolute', bottom: 24, left: 0, right: 0, alignItems: 'center' },
+  pointsPill: { backgroundColor: 'rgba(10,14,31,0.72)', borderRadius: 999, paddingHorizontal: 16, paddingVertical: 8 },
+  pointsTxt: { fontSize: 15, fontFamily: theme.fonts.black },
 
-  streakBurst: { position: 'absolute', top: '42%', left: 0, right: 0, alignItems: 'center' },
+  streakBurst: { position: 'absolute', top: '40%', left: 0, right: 0, alignItems: 'center' },
   streakBurstTxt: {
     color: theme.streak,
     fontSize: 36,

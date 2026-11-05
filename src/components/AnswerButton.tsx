@@ -61,7 +61,7 @@ export function AnswerButton({ label, neonColor, onPress, disabled, state = 'idl
   return (
     <Animated.View
       style={{
-        width: '100%',
+        flex: 1,
         opacity: state === 'dimmed' ? 0.5 : enter,
         transform: [{ scale: Animated.multiply(enter.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }), pop) }],
       }}
@@ -79,11 +79,11 @@ export function AnswerButton({ label, neonColor, onPress, disabled, state = 'idl
 
 const styles = StyleSheet.create({
   btn: {
+    flex: 1,
     borderRadius: 18,
     borderWidth: 2,
     paddingVertical: 14,
     paddingHorizontal: 12,
-    minHeight: 104,
     alignItems: 'center',
     justifyContent: 'center',
     shadowOpacity: 0.8,
@@ -91,5 +91,5 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 0 },
     elevation: 6,
   },
-  label: { fontSize: 16, fontFamily: theme.fonts.bold, textAlign: 'center' },
+  label: { fontSize: 18, fontFamily: theme.fonts.bold, textAlign: 'center' },
 });

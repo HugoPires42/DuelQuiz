@@ -11,6 +11,7 @@ export interface Question {
   prompt: string;
   options: string[]; // 4 propositions
   correctIndex: number; // index de la bonne réponse (0..3)
+  difficulty: number; // 1 (très facile) à 5 (très difficile)
 }
 
 export interface Side {

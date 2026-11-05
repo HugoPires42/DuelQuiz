@@ -36,15 +36,16 @@ export function initSounds() {
       // ignore
     }
   });
-  // Musique d'ambiance, en boucle et discrète.
-  try {
-    musicPlayer = createAudioPlayer(require('../../assets/sounds/music.wav'));
-    musicPlayer.loop = true;
-    musicPlayer.volume = 0.3;
-    if (!muted) musicPlayer.play();
-  } catch {
-    // ignore
-  }
+  // Musique d'ambiance désactivée pour l'instant (rendu synthétisé peu
+  // agréable). À réactiver avec un vrai morceau libre de droit : décommenter.
+  // try {
+  //   musicPlayer = createAudioPlayer(require('../../assets/sounds/music.wav'));
+  //   musicPlayer.loop = true;
+  //   musicPlayer.volume = 0.3;
+  //   if (!muted) musicPlayer.play();
+  // } catch {
+  //   // ignore
+  // }
 }
 
 /** Joue un effet sonore (rejoué depuis le début si déjà en cours). */

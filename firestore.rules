@@ -1,0 +1,31 @@
+rules_version = '2';
+
+// Règles de sécurité Firestore — QuizDuel
+// Principe : auth requise partout ; chaque joueur ne peut écrire QUE ses
+// propres données ; le reste est refusé par défaut.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ───── Profils des joueurs ─────
+    match /users/{uid} {
+      // Lisible par tout utilisateur connecté (amis, adversaires, classement).
+      allow read: if request.auth != null;
+      // Créable / modifiable uniquement par son propriétaire.
+      allow create, update: if request.auth != null && request.auth.uid == uid;
+      allow delete: if false;
+    }
+
+    // ───── Registre d'unicité des identifiants « pseudo#tag » ─────
+    match /usernames/{key} {
+      allow read: if request.auth != null;
+      // On ne peut réserver un identifiant que pour SOI-MÊME
+      // (create échoue nativement si le document existe déjà → unicité).
+      allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
+      // On ne peut libérer que ses propres identifiants.
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow update: if false;
+    }
+
+    // Tout le reste est refusé par défaut (aucune règle = accès refusé).
+  }
+}

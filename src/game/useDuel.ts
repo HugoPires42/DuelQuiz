@@ -13,8 +13,8 @@ const freshSide = (): Side => ({ score: 0, streak: 0, bestStreak: 0 });
  * Gère : compte à rebours d'intro, chrono par question, réponse du
  * joueur, réponse programmée du bot, résolution de la manche et score.
  */
-export function useDuel(totalQuestions = 7) {
-  const [questions, setQuestions] = useState<Question[]>(() => pickQuestions(totalQuestions));
+export function useDuel(totalQuestions = 7, categoryId?: string) {
+  const [questions, setQuestions] = useState<Question[]>(() => pickQuestions(totalQuestions, categoryId));
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>('intro');
   const [countdown, setCountdown] = useState(3);
@@ -153,7 +153,7 @@ export function useDuel(totalQuestions = 7) {
 
   const onRestart = useCallback(() => {
     clearTimers();
-    setQuestions(pickQuestions(totalQuestions));
+    setQuestions(pickQuestions(totalQuestions, categoryId));
     indexRef.current = 0;
     youRef.current = freshSide();
     botRef.current = freshSide();
@@ -168,7 +168,7 @@ export function useDuel(totalQuestions = 7) {
     setTimeLeftMs(QUESTION_TIME_MS);
     setCountdown(3);
     setPhase('intro');
-  }, [totalQuestions, clearTimers]);
+  }, [totalQuestions, categoryId, clearTimers]);
 
   return {
     phase,

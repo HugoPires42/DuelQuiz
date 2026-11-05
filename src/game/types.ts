@@ -1,6 +1,13 @@
+export interface Category {
+  id: string;
+  label: string;
+  emoji: string;
+  color: string;
+}
+
 export interface Question {
   id: string;
-  category: string;
+  categoryId: string; // référence à Category.id
   prompt: string;
   options: string[]; // 4 propositions
   correctIndex: number; // index de la bonne réponse (0..3)

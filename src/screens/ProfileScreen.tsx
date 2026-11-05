@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { ThemedBackground } from '../components/ThemedBackground';
+import { Avatar } from '../components/Avatar';
 import { Profile, setPseudo, fullTag } from '../account/account';
 import { playSound } from '../game/sounds';
 import { theme } from '../theme';
@@ -9,9 +10,10 @@ interface Props {
   profile: Profile | null;
   onBack: () => void;
   onChange: (p: Profile) => void;
+  onCustomize: () => void;
 }
 
-export function ProfileScreen({ profile, onBack, onChange }: Props) {
+export function ProfileScreen({ profile, onBack, onChange, onCustomize }: Props) {
   const [pseudo, setPseudoInput] = useState(profile?.pseudo ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -59,8 +61,14 @@ export function ProfileScreen({ profile, onBack, onChange }: Props) {
         <Text style={styles.backTxt}>← Retour</Text>
       </Pressable>
 
-      <Text style={styles.title}>Profil</Text>
-      <Text style={styles.tag}>{fullTag(profile)}</Text>
+      <View style={styles.avatarHeader}>
+        <Avatar config={profile.avatar} size={112} />
+        <Text style={styles.title}>Profil</Text>
+        <Text style={styles.tag}>{fullTag(profile)}</Text>
+        <Pressable style={({ pressed }) => [styles.customize, pressed && { opacity: 0.85 }]} onPress={onCustomize}>
+          <Text style={styles.customizeTxt}>Personnaliser l'avatar</Text>
+        </Pressable>
+      </View>
 
       <View style={styles.card}>
         <Text style={styles.label}>Pseudo</Text>
@@ -116,8 +124,11 @@ const styles = StyleSheet.create({
   back: { alignSelf: 'flex-start', paddingVertical: 8, paddingRight: 16 },
   backTxt: { color: theme.textDim, fontSize: 15, fontFamily: theme.fonts.semiBold },
 
-  title: { color: theme.text, fontSize: 30, fontFamily: theme.fonts.black, marginTop: 8 },
-  tag: { color: theme.primary, fontSize: 18, fontFamily: theme.fonts.extraBold, marginTop: 2, marginBottom: 20 },
+  avatarHeader: { alignItems: 'center' },
+  title: { color: theme.text, fontSize: 26, fontFamily: theme.fonts.black, marginTop: 10 },
+  tag: { color: theme.primary, fontSize: 18, fontFamily: theme.fonts.extraBold, marginTop: 2, marginBottom: 12 },
+  customize: { borderWidth: 2, borderColor: theme.primary, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 18, marginBottom: 18 },
+  customizeTxt: { color: theme.primary, fontSize: 13, fontFamily: theme.fonts.bold },
 
   card: { backgroundColor: theme.surface, borderRadius: 18, padding: 18 },
   label: { color: theme.textDim, fontSize: 13, fontFamily: theme.fonts.extraBold, textTransform: 'uppercase', letterSpacing: 1 },

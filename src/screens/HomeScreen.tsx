@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { ThemedBackground } from '../components/ThemedBackground';
+import { Avatar } from '../components/Avatar';
+import { AvatarConfig } from '../avatar/types';
 import { isMuted, setMuted, playSound } from '../game/sounds';
 import { theme } from '../theme';
 
 interface Props {
-  profile?: { pseudo: string; tag: string } | null;
+  profile?: { pseudo: string; tag: string; avatar?: AvatarConfig } | null;
   onProfile: () => void;
   onDuelThemes: () => void;
   onAllThemes: () => void;
@@ -25,7 +27,7 @@ export function HomeScreen({ profile, onProfile, onDuelThemes, onAllThemes }: Pr
       <ThemedBackground />
       {profile && (
         <Pressable style={styles.profileChip} onPress={onProfile}>
-          <View style={styles.profileDot} />
+          <Avatar config={profile.avatar} size={22} />
           <Text style={styles.profileTxt}>
             {profile.pseudo}#{profile.tag}
           </Text>

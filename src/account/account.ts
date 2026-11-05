@@ -1,12 +1,13 @@
 import { signInAnonymously } from 'firebase/auth';
 import { doc, getDoc, setDoc, deleteDoc, runTransaction, serverTimestamp, Firestore } from 'firebase/firestore';
 import { getFirebase } from '../firebase/config';
+import { AvatarConfig, DEFAULT_AVATAR_CONFIG } from '../avatar/types';
 
 export interface Profile {
   uid: string;
   pseudo: string;
   tag: string; // discriminateur « 0042 » → identité complète = pseudo#tag
-  avatarId: string;
+  avatar: AvatarConfig;
   level: number;
   xp: number;
   wins: number;
@@ -14,7 +15,6 @@ export interface Profile {
   draws: number;
 }
 
-export const DEFAULT_AVATAR = 'a1';
 export const fullTag = (p: Pick<Profile, 'pseudo' | 'tag'>) => `${p.pseudo}#${p.tag}`;
 
 function randomTag(): string {
@@ -64,7 +64,7 @@ export async function ensureProfile(uid: string): Promise<Profile | null> {
 
   const { pseudo, tag } = await claimUsername(fb.db, uid, 'Joueur');
   const profile: Profile = {
-    uid, pseudo, tag, avatarId: DEFAULT_AVATAR,
+    uid, pseudo, tag, avatar: DEFAULT_AVATAR_CONFIG,
     level: 1, xp: 0, wins: 0, losses: 0, draws: 0,
   };
   await setDoc(ref, { ...profile, createdAt: serverTimestamp() });
@@ -100,4 +100,14 @@ export async function setPseudo(uid: string, newPseudo: string): Promise<Profile
     }
   }
   return { ...(current as Profile), pseudo, tag };
+}
+
+/** Sauvegarde la configuration d'avatar du joueur. */
+export async function saveAvatar(uid: string, avatar: AvatarConfig): Promise<Profile | null> {
+  const fb = getFirebase();
+  if (!fb) return null;
+  const ref = doc(fb.db, 'users', uid);
+  await setDoc(ref, { avatar }, { merge: true });
+  const snap = await getDoc(ref);
+  return snap.exists() ? (snap.data() as Profile) : null;
 }

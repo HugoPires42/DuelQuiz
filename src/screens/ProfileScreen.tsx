@@ -11,9 +11,10 @@ interface Props {
   onBack: () => void;
   onChange: (p: Profile) => void;
   onCustomize: () => void;
+  onFriends: () => void;
 }
 
-export function ProfileScreen({ profile, onBack, onChange, onCustomize }: Props) {
+export function ProfileScreen({ profile, onBack, onChange, onCustomize, onFriends }: Props) {
   const [pseudo, setPseudoInput] = useState(profile?.pseudo ?? '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,9 +66,14 @@ export function ProfileScreen({ profile, onBack, onChange, onCustomize }: Props)
         <Avatar config={profile.avatar} size={112} />
         <Text style={styles.title}>Profil</Text>
         <Text style={styles.tag}>{fullTag(profile)}</Text>
-        <Pressable style={({ pressed }) => [styles.customize, pressed && { opacity: 0.85 }]} onPress={onCustomize}>
-          <Text style={styles.customizeTxt}>Personnaliser l'avatar</Text>
-        </Pressable>
+        <View style={styles.headerBtns}>
+          <Pressable style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.85 }]} onPress={onCustomize}>
+            <Text style={styles.headerBtnTxt}>Avatar</Text>
+          </Pressable>
+          <Pressable style={({ pressed }) => [styles.headerBtn, pressed && { opacity: 0.85 }]} onPress={onFriends}>
+            <Text style={styles.headerBtnTxt}>Amis</Text>
+          </Pressable>
+        </View>
       </View>
 
       <View style={styles.card}>
@@ -127,8 +133,9 @@ const styles = StyleSheet.create({
   avatarHeader: { alignItems: 'center' },
   title: { color: theme.text, fontSize: 26, fontFamily: theme.fonts.black, marginTop: 10 },
   tag: { color: theme.primary, fontSize: 18, fontFamily: theme.fonts.extraBold, marginTop: 2, marginBottom: 12 },
-  customize: { borderWidth: 2, borderColor: theme.primary, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 18, marginBottom: 18 },
-  customizeTxt: { color: theme.primary, fontSize: 13, fontFamily: theme.fonts.bold },
+  headerBtns: { flexDirection: 'row', gap: 10, marginBottom: 18 },
+  headerBtn: { borderWidth: 2, borderColor: theme.primary, borderRadius: 999, paddingVertical: 8, paddingHorizontal: 22 },
+  headerBtnTxt: { color: theme.primary, fontSize: 13, fontFamily: theme.fonts.bold },
 
   card: { backgroundColor: theme.surface, borderRadius: 18, padding: 18 },
   label: { color: theme.textDim, fontSize: 13, fontFamily: theme.fonts.extraBold, textTransform: 'uppercase', letterSpacing: 1 },

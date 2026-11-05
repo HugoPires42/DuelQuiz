@@ -13,13 +13,14 @@ import { CategoryScreen } from './src/screens/CategoryScreen';
 import { DuelScreen, Matchup } from './src/screens/DuelScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { AvatarScreen } from './src/screens/AvatarScreen';
+import { FriendsScreen } from './src/screens/FriendsScreen';
 import { categoryLabel, randomCategory } from './src/game/categories';
 import { ensureSignedIn, ensureProfile, Profile } from './src/account/account';
 import { initSounds } from './src/game/sounds';
 import { theme } from './src/theme';
 
 const useNative = Platform.OS !== 'web';
-type Screen = 'home' | 'theme' | 'duel' | 'profile' | 'avatar';
+type Screen = 'home' | 'theme' | 'duel' | 'profile' | 'avatar' | 'friends';
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -100,11 +101,13 @@ export default function App() {
             onBack={() => setScreen('home')}
             onChange={setProfile}
             onCustomize={() => setScreen('avatar')}
+            onFriends={() => setScreen('friends')}
           />
         )}
         {screen === 'avatar' && (
           <AvatarScreen profile={profile} onBack={() => setScreen('profile')} onChange={setProfile} />
         )}
+        {screen === 'friends' && <FriendsScreen profile={profile} onBack={() => setScreen('home')} />}
       </Animated.View>
     </SafeAreaView>
   );

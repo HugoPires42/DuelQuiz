@@ -8,9 +8,7 @@ service cloud.firestore {
 
     // ───── Profils des joueurs ─────
     match /users/{uid} {
-      // Lisible par tout utilisateur connecté (amis, adversaires, classement).
       allow read: if request.auth != null;
-      // Créable / modifiable uniquement par son propriétaire.
       allow create, update: if request.auth != null && request.auth.uid == uid;
       allow delete: if false;
     }
@@ -18,11 +16,33 @@ service cloud.firestore {
     // ───── Registre d'unicité des identifiants « pseudo#tag » ─────
     match /usernames/{key} {
       allow read: if request.auth != null;
-      // On ne peut réserver un identifiant que pour SOI-MÊME
-      // (create échoue nativement si le document existe déjà → unicité).
       allow create: if request.auth != null && request.resource.data.uid == request.auth.uid;
-      // On ne peut libérer que ses propres identifiants.
       allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow update: if false;
+    }
+
+    // ───── Demandes d'amis ─────
+    match /friendRequests/{id} {
+      // Lisible par l'expéditeur et le destinataire.
+      allow read: if request.auth != null &&
+        (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
+      // On n'envoie une demande qu'EN SON NOM, et pas à soi-même.
+      allow create: if request.auth != null &&
+        request.resource.data.from == request.auth.uid &&
+        request.resource.data.to != request.auth.uid;
+      // Accepter / refuser / annuler : l'un des deux concernés.
+      allow update, delete: if request.auth != null &&
+        (resource.data.to == request.auth.uid || resource.data.from == request.auth.uid);
+    }
+
+    // ───── Amitiés (document partagé par les 2 joueurs) ─────
+    match /friendships/{pairId} {
+      allow read: if request.auth != null && request.auth.uid in resource.data.users;
+      // Créable uniquement par un des 2 participants, avec exactement 2 membres.
+      allow create: if request.auth != null &&
+        request.auth.uid in request.resource.data.users &&
+        request.resource.data.users.size() == 2;
+      allow delete: if request.auth != null && request.auth.uid in resource.data.users;
       allow update: if false;
     }
 

@@ -66,15 +66,37 @@ export const QUESTIONS: Question[] = [
   { id: 'e8', categoryId: 'ent', prompt: "Qui a écrit « Le Petit Prince » ?", options: ['Jules Verne', 'Saint-Exupéry', 'Albert Camus', 'Marcel Pagnol'], correctIndex: 1 },
 ];
 
+function shuffle<T>(arr: T[]): T[] {
+  return [...arr].sort(() => Math.random() - 0.5);
+}
+
 /**
  * Tire n questions au hasard, sans répétition.
- * @param categoryId  thème à filtrer ; `undefined` ou `'all'` = tous thèmes.
+ * @param categoryIds  thèmes à inclure. `undefined` ou vide = tous les thèmes.
+ *                     Avec plusieurs thèmes, le tirage est équilibré entre eux
+ *                     (on pioche à tour de rôle dans chaque thème).
  */
-export function pickQuestions(n: number, categoryId?: string): Question[] {
-  const pool =
-    !categoryId || categoryId === 'all'
-      ? QUESTIONS
-      : QUESTIONS.filter((q) => q.categoryId === categoryId);
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, Math.min(n, shuffled.length));
+export function pickQuestions(n: number, categoryIds?: string[]): Question[] {
+  // Tous les thèmes (ou aucun filtre) : simple tirage aléatoire.
+  if (!categoryIds || categoryIds.length === 0) {
+    return shuffle(QUESTIONS).slice(0, Math.min(n, QUESTIONS.length));
+  }
+
+  // Un seul thème.
+  if (categoryIds.length === 1) {
+    const pool = QUESTIONS.filter((q) => q.categoryId === categoryIds[0]);
+    return shuffle(pool).slice(0, Math.min(n, pool.length));
+  }
+
+  // Plusieurs thèmes : mix équilibré (round-robin entre les thèmes).
+  const buckets = categoryIds.map((id) => shuffle(QUESTIONS.filter((q) => q.categoryId === id)));
+  const result: Question[] = [];
+  let i = 0;
+  while (result.length < n && buckets.some((b) => b.length > 0)) {
+    const next = buckets[i % buckets.length].shift();
+    if (next) result.push(next);
+    i++;
+  }
+  // Re-mélange pour éviter une alternance stricte thème A / thème B.
+  return shuffle(result).slice(0, n);
 }

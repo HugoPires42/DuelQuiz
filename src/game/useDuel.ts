@@ -1,20 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Question, RoundOutcome, Side } from './types';
 import { pickQuestions } from './questions';
-import { computePoints, QUESTION_TIME_MS } from './scoring';
+import { computePoints, QUESTION_TIME_MS, READING_TIME_MS } from './scoring';
 import { decideBotAnswer, BotDecision, DEFAULT_BOT } from './bot';
 
-export type Phase = 'intro' | 'playing' | 'reveal' | 'done';
+// 'reading' = la question s'affiche seule (temps de lecture) avant les réponses.
+export type Phase = 'intro' | 'reading' | 'playing' | 'reveal' | 'done';
 
 const freshSide = (): Side => ({ score: 0, streak: 0, bestStreak: 0 });
 
 /**
  * Machine à états d'un duel contre le bot.
- * Gère : compte à rebours d'intro, chrono par question, réponse du
- * joueur, réponse programmée du bot, résolution de la manche et score.
+ * Déroulé d'une question : lecture (question seule) → réponses (chrono +
+ * réponse programmée du bot) → révélation.
  */
-export function useDuel(totalQuestions = 7, categoryId?: string) {
-  const [questions, setQuestions] = useState<Question[]>(() => pickQuestions(totalQuestions, categoryId));
+export function useDuel(totalQuestions = 7, categoryIds?: string[]) {
+  const [questions, setQuestions] = useState<Question[]>(() => pickQuestions(totalQuestions, categoryIds));
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>('intro');
   const [countdown, setCountdown] = useState(3);
@@ -31,6 +32,7 @@ export function useDuel(totalQuestions = 7, categoryId?: string) {
   const startRef = useRef(0);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const botTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const readingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const youAnsRef = useRef<{ index: number; timeMs: number } | null>(null);
   const botAnsRef = useRef<{ decision: BotDecision; timeMs: number } | null>(null);
   const resolvedRef = useRef(false);
@@ -38,8 +40,10 @@ export function useDuel(totalQuestions = 7, categoryId?: string) {
   const clearTimers = useCallback(() => {
     if (tickRef.current) clearInterval(tickRef.current);
     if (botTimerRef.current) clearTimeout(botTimerRef.current);
+    if (readingTimerRef.current) clearTimeout(readingTimerRef.current);
     tickRef.current = null;
     botTimerRef.current = null;
+    readingTimerRef.current = null;
   }, []);
 
   // Résout la manche (une seule fois) : calcule les points des deux camps.
@@ -87,39 +91,47 @@ export function useDuel(totalQuestions = 7, categoryId?: string) {
     setPhase('reveal');
   }, [questions, clearTimers]);
 
-  // Démarre une question donnée : chrono + réponse programmée du bot.
+  // Phase de réponse : affiche les réponses, démarre le chrono et programme le bot.
+  const startAnswering = useCallback(() => {
+    const q = questions[indexRef.current];
+    setPhase('playing');
+    startRef.current = Date.now();
+
+    const decision = decideBotAnswer(q, DEFAULT_BOT);
+    botTimerRef.current = setTimeout(() => {
+      botAnsRef.current = { decision, timeMs: decision.reactionMs };
+      if (youAnsRef.current) resolveRound();
+    }, decision.reactionMs);
+
+    tickRef.current = setInterval(() => {
+      const left = Math.max(0, QUESTION_TIME_MS - (Date.now() - startRef.current));
+      setTimeLeftMs(left);
+      if (left <= 0) resolveRound();
+    }, 100);
+  }, [questions, resolveRound]);
+
+  // Démarre une question : d'abord la lecture (question seule), puis les réponses.
   const beginQuestion = useCallback(
     (qIndex: number) => {
-      const q = questions[qIndex];
+      indexRef.current = qIndex;
+      setIndex(qIndex);
       resolvedRef.current = false;
       youAnsRef.current = null;
       botAnsRef.current = null;
       setSelectedIndex(null);
       setOutcome(null);
       setTimeLeftMs(QUESTION_TIME_MS);
-      setPhase('playing');
-      startRef.current = Date.now();
-
-      const decision = decideBotAnswer(q, DEFAULT_BOT);
-      botTimerRef.current = setTimeout(() => {
-        botAnsRef.current = { decision, timeMs: decision.reactionMs };
-        if (youAnsRef.current) resolveRound();
-      }, decision.reactionMs);
-
-      tickRef.current = setInterval(() => {
-        const left = Math.max(0, QUESTION_TIME_MS - (Date.now() - startRef.current));
-        setTimeLeftMs(left);
-        if (left <= 0) resolveRound();
-      }, 100);
+      setPhase('reading');
+      readingTimerRef.current = setTimeout(startAnswering, READING_TIME_MS);
     },
-    [questions, resolveRound]
+    [startAnswering]
   );
 
   // Compte à rebours d'intro (3, 2, 1, GO) puis lance la 1re question.
   useEffect(() => {
     if (phase !== 'intro') return;
     if (countdown <= 0) {
-      beginQuestion(indexRef.current);
+      beginQuestion(0);
       return;
     }
     const t = setTimeout(() => setCountdown((c) => c - 1), 750);
@@ -146,14 +158,12 @@ export function useDuel(totalQuestions = 7, categoryId?: string) {
       setPhase('done');
       return;
     }
-    indexRef.current = next;
-    setIndex(next);
     beginQuestion(next);
   }, [questions, beginQuestion]);
 
   const onRestart = useCallback(() => {
     clearTimers();
-    setQuestions(pickQuestions(totalQuestions, categoryId));
+    setQuestions(pickQuestions(totalQuestions, categoryIds));
     indexRef.current = 0;
     youRef.current = freshSide();
     botRef.current = freshSide();
@@ -168,7 +178,7 @@ export function useDuel(totalQuestions = 7, categoryId?: string) {
     setTimeLeftMs(QUESTION_TIME_MS);
     setCountdown(3);
     setPhase('intro');
-  }, [totalQuestions, categoryId, clearTimers]);
+  }, [totalQuestions, categoryIds, clearTimers]);
 
   return {
     phase,

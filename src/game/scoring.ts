@@ -10,6 +10,7 @@
 export const QUESTION_TIME_MS = 10_000; // temps max par question
 export const BASE_POINTS = 20; // points garantis si la réponse est juste
 export const MAX_SPEED_BONUS = 80; // bonus max pour une réponse instantanée
+export const READING_TIME_MS = 1500; // délai de lecture de la question avant l'affichage des réponses
 
 /**
  * Multiplicateur de série. `streakAfter` = nombre de bonnes réponses

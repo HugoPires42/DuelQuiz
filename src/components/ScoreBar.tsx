@@ -25,7 +25,7 @@ function SideBadge({ info, align }: { info: SideInfo; align: 'flex-start' | 'fle
       <Text style={[styles.name, { color: info.color }]}>{info.name}</Text>
       <Text style={styles.score}>{info.score}</Text>
       {info.streak >= 2 && (
-        <Text style={styles.streak}>🔥 série x{info.streak}</Text>
+        <Text style={styles.streak}>série x{info.streak}</Text>
       )}
     </View>
   );

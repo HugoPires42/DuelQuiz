@@ -13,7 +13,7 @@ interface Props {
 export function ResultScreen({ you, bot, onRestart, onHome }: Props) {
   const draw = you.score === bot.score;
   const win = you.score > bot.score;
-  const verdict = draw ? 'ÉGALITÉ' : win ? 'VICTOIRE 🏆' : 'DÉFAITE';
+  const verdict = draw ? 'ÉGALITÉ' : win ? 'VICTOIRE' : 'DÉFAITE';
   const verdictColor = draw ? theme.textDim : win ? theme.correct : theme.wrong;
 
   return (
@@ -41,7 +41,7 @@ function Column({ name, color, score, best }: { name: string; color: string; sco
     <View style={styles.col}>
       <Text style={[styles.cName, { color }]}>{name}</Text>
       <Text style={styles.cScore}>{score}</Text>
-      <Text style={styles.cBest}>série max {best} 🔥</Text>
+      <Text style={styles.cBest}>série max {best}</Text>
     </View>
   );
 }

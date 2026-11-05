@@ -12,17 +12,37 @@ import { theme } from '../theme';
 
 const useNative = Platform.OS !== 'web';
 
-export function DuelScreen({ categoryId, onHome }: { categoryId?: string; onHome: () => void }) {
-  const d = useDuel(7, categoryId);
+export interface Matchup {
+  youLabel: string;
+  botLabel: string;
+}
 
-  // Animation d'entrée de la carte question (rejouée à chaque question).
+interface Props {
+  categoryIds?: string[]; // thèmes du duel ; undefined = tous les thèmes
+  matchup?: Matchup | null; // thèmes choisis (mode « Duel de thèmes »)
+  onHome: () => void;
+}
+
+export function DuelScreen({ categoryIds, matchup, onHome }: Props) {
+  const d = useDuel(7, categoryIds);
+
+  // Entrée de la carte question (rejouée à chaque nouvelle question).
   const cardAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     cardAnim.setValue(0);
     Animated.timing(cardAnim, { toValue: 1, duration: 280, useNativeDriver: useNative }).start();
   }, [d.questionNumber, cardAnim]);
 
-  // Animation d'apparition du bloc révélation.
+  // Apparition des réponses (après le temps de lecture).
+  const answersAnim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (d.phase === 'playing') {
+      answersAnim.setValue(0);
+      Animated.timing(answersAnim, { toValue: 1, duration: 220, useNativeDriver: useNative }).start();
+    }
+  }, [d.phase, answersAnim]);
+
+  // Apparition du bloc révélation.
   const revealAnim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (d.phase === 'reveal') {
@@ -46,6 +66,9 @@ export function DuelScreen({ categoryId, onHome }: { categoryId?: string; onHome
   if (d.phase === 'intro') {
     return (
       <View style={styles.center}>
+        <Text style={styles.matchup}>
+          {matchup ? `${matchup.youLabel}   contre   ${matchup.botLabel}` : 'Tous les thèmes'}
+        </Text>
         <Text style={styles.getReady}>Prépare-toi…</Text>
         <Countdown value={d.countdown} />
       </View>
@@ -54,7 +77,9 @@ export function DuelScreen({ categoryId, onHome }: { categoryId?: string; onHome
 
   const q = d.question;
   const cat = categoryById(q.categoryId);
+  const reading = d.phase === 'reading';
   const revealed = d.phase === 'reveal';
+  const showAnswers = d.phase === 'playing' || revealed;
   const timePct = Math.max(0, Math.min(1, d.timeLeftMs / QUESTION_TIME_MS));
   const last = d.questionNumber >= d.totalQuestions;
 
@@ -86,33 +111,49 @@ export function DuelScreen({ categoryId, onHome }: { categoryId?: string; onHome
         }}
       >
         <View style={styles.qCard}>
-          <Text style={styles.category}>{cat ? `${cat.emoji} ${cat.label}` : ''}</Text>
+          <Text style={styles.category}>{cat ? cat.label : ''}</Text>
           <Text style={styles.prompt}>{q.prompt}</Text>
         </View>
       </Animated.View>
 
-      <View style={styles.answers}>
-        {q.options.map((opt, i) => {
-          let state: AnswerState = 'idle';
-          if (revealed && d.outcome) {
-            if (i === d.outcome.correctIndex) state = 'correct';
-            else if (i === d.selectedIndex) state = 'wrong';
-            else state = 'dimmed';
-          } else if (i === d.selectedIndex) {
-            state = 'selected';
-          }
-          return (
-            <AnswerButton
-              key={i}
-              label={opt}
-              colorIndex={i}
-              state={state}
-              disabled={revealed || d.selectedIndex !== null}
-              onPress={() => d.onSelect(i)}
-            />
-          );
-        })}
-      </View>
+      {reading && (
+        <View style={styles.readingHint}>
+          <Text style={styles.readingTxt}>Lis la question…</Text>
+        </View>
+      )}
+
+      {showAnswers && (
+        <Animated.View
+          style={[
+            styles.answers,
+            {
+              opacity: answersAnim,
+              transform: [{ translateY: answersAnim.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }],
+            },
+          ]}
+        >
+          {q.options.map((opt, i) => {
+            let state: AnswerState = 'idle';
+            if (revealed && d.outcome) {
+              if (i === d.outcome.correctIndex) state = 'correct';
+              else if (i === d.selectedIndex) state = 'wrong';
+              else state = 'dimmed';
+            } else if (i === d.selectedIndex) {
+              state = 'selected';
+            }
+            return (
+              <AnswerButton
+                key={i}
+                label={opt}
+                colorIndex={i}
+                state={state}
+                disabled={revealed || d.selectedIndex !== null}
+                onPress={() => d.onSelect(i)}
+              />
+            );
+          })}
+        </Animated.View>
+      )}
 
       {revealed && d.outcome && (
         <Animated.View
@@ -149,6 +190,7 @@ function PointTag({ label, pts, color, time }: { label: string; pts: number; col
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 18 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  matchup: { color: theme.textDim, fontSize: 15, fontWeight: '700', marginBottom: 10, textAlign: 'center' },
   getReady: { color: theme.textDim, fontSize: 20, fontWeight: '700' },
 
   progressWrap: { marginTop: 18 },
@@ -159,6 +201,9 @@ const styles = StyleSheet.create({
   qCard: { backgroundColor: theme.surface, borderRadius: 18, padding: 20, marginTop: 18 },
   category: { color: theme.primary, fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1 },
   prompt: { color: theme.text, fontSize: 21, fontWeight: '800', marginTop: 8, lineHeight: 28 },
+
+  readingHint: { marginTop: 24, alignItems: 'center' },
+  readingTxt: { color: theme.textDim, fontSize: 15, fontWeight: '700' },
 
   answers: { marginTop: 18 },
 

@@ -12,6 +12,7 @@ import { HomeScreen } from './src/screens/HomeScreen';
 import { CategoryScreen } from './src/screens/CategoryScreen';
 import { DuelScreen, Matchup } from './src/screens/DuelScreen';
 import { categoryLabel, randomCategory } from './src/game/categories';
+import { initSounds } from './src/game/sounds';
 import { theme } from './src/theme';
 
 const useNative = Platform.OS !== 'web';
@@ -36,6 +37,11 @@ export default function App() {
     fade.setValue(0);
     Animated.timing(fade, { toValue: 1, duration: 260, useNativeDriver: useNative }).start();
   }, [screen, fade]);
+
+  // Initialise l'audio une fois.
+  useEffect(() => {
+    initSounds();
+  }, []);
 
   // Mode « Tous les thèmes » : toutes les catégories mélangées.
   const startAllThemes = () => {

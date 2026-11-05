@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { ThemedBackground } from '../components/ThemedBackground';
+import { isMuted, setMuted, playSound } from '../game/sounds';
 import { theme } from '../theme';
 
 interface Props {
@@ -9,9 +10,21 @@ interface Props {
 }
 
 export function HomeScreen({ onDuelThemes, onAllThemes }: Props) {
+  const [soundOn, setSoundOn] = useState(!isMuted());
+  const toggleSound = () => {
+    const next = !soundOn;
+    setSoundOn(next);
+    setMuted(!next);
+    if (next) playSound('tap');
+  };
+
   return (
     <View style={styles.container}>
       <ThemedBackground />
+      <Pressable style={styles.soundToggle} onPress={toggleSound}>
+        <View style={[styles.soundDot, { backgroundColor: soundOn ? theme.correct : theme.textDim }]} />
+        <Text style={styles.soundTxt}>{soundOn ? 'Son activé' : 'Son coupé'}</Text>
+      </Pressable>
       <Text style={styles.logo}>QuizDuel</Text>
       <Text style={styles.tagline}>
         Défie le bot en 1 contre 1.{'\n'}Le plus rapide marque le plus de points.
@@ -55,6 +68,20 @@ function Rule({ text }: { text: string }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 },
+  soundToggle: {
+    position: 'absolute',
+    top: 14,
+    right: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    backgroundColor: theme.surface,
+  },
+  soundDot: { width: 8, height: 8, borderRadius: 4 },
+  soundTxt: { color: theme.textDim, fontSize: 12, fontFamily: theme.fonts.semiBold },
   logo: { fontSize: 50, fontFamily: theme.fonts.black, color: theme.primary, letterSpacing: 0.5 },
   tagline: { color: theme.textDim, fontSize: 16, fontFamily: theme.fonts.medium, textAlign: 'center', marginTop: 12, lineHeight: 22 },
   rules: { marginTop: 32, alignSelf: 'stretch', gap: 14 },

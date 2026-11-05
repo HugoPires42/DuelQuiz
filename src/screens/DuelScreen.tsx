@@ -4,6 +4,7 @@ import { useDuel } from '../game/useDuel';
 import { QUESTION_TIME_MS } from '../game/scoring';
 import { categoryById } from '../game/categories';
 import { hapticSuccess, hapticError } from '../game/haptics';
+import { playSound } from '../game/sounds';
 import { AnswerButton, AnswerState } from '../components/AnswerButton';
 import { ScoreBar } from '../components/ScoreBar';
 import { ThemeBanner } from '../components/ThemeBanner';
@@ -43,12 +44,38 @@ export function DuelScreen({ categoryIds, onHome }: Props) {
     }
   }, [d.phase, qT, chrome]);
 
-  // Feedback haptique instantané dès que le joueur répond.
+  // Feedback instantané (haptique + son) dès que le joueur répond.
   useEffect(() => {
     if (d.selectedIndex == null || !d.question) return;
-    if (d.selectedIndex === d.question.correctIndex) hapticSuccess();
-    else hapticError();
+    if (d.selectedIndex === d.question.correctIndex) {
+      hapticSuccess();
+      playSound('correct');
+    } else {
+      hapticError();
+      playSound('wrong');
+    }
   }, [d.selectedIndex, d.question]);
+
+  // Son de balayage à l'arrivée d'un thème.
+  useEffect(() => {
+    if (d.phase === 'themeIntro') playSound('swoosh');
+  }, [d.phase]);
+
+  // Tic du chrono sur les 3 dernières secondes (tant qu'on n'a pas répondu).
+  const tickSecRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (d.phase !== 'playing' || d.selectedIndex != null) {
+      tickSecRef.current = null;
+      return;
+    }
+    if (d.timeLeftMs <= 3000 && d.timeLeftMs > 0) {
+      const sec = Math.ceil(d.timeLeftMs / 1000);
+      if (tickSecRef.current !== sec) {
+        tickSecRef.current = sec;
+        playSound('tick');
+      }
+    }
+  }, [d.timeLeftMs, d.phase, d.selectedIndex]);
 
   // Animation de série.
   const streakAnim = useRef(new Animated.Value(0)).current;
@@ -56,6 +83,7 @@ export function DuelScreen({ categoryIds, onHome }: Props) {
   useEffect(() => {
     if (d.phase === 'reveal' && d.outcome?.you.correct && d.you.streak >= 2) {
       setStreakShown(d.you.streak);
+      playSound('streak');
       streakAnim.setValue(0);
       Animated.sequence([
         Animated.spring(streakAnim, { toValue: 1, friction: 5, useNativeDriver: useNative }),

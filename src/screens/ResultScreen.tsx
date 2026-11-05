@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { ThemedBackground } from '../components/ThemedBackground';
+import { playSound } from '../game/sounds';
 import { theme } from '../theme';
 import { Side } from '../game/types';
 
@@ -15,6 +16,11 @@ export function ResultScreen({ you, bot, onRestart, onHome }: Props) {
   const draw = you.score === bot.score;
   const win = you.score > bot.score;
   const verdict = draw ? 'ÉGALITÉ' : win ? 'VICTOIRE' : 'DÉFAITE';
+
+  useEffect(() => {
+    playSound(win ? 'win' : draw ? 'win' : 'lose');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const verdictColor = draw ? theme.textDim : win ? theme.correct : theme.wrong;
 
   return (

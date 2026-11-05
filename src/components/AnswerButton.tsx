@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Platform, Pressable, Text, StyleSheet } from 'react-native';
 import { theme } from '../theme';
 import { hapticTap } from '../game/haptics';
+import { playSound } from '../game/sounds';
 
 export type AnswerState = 'idle' | 'selected' | 'correct' | 'wrong' | 'dimmed';
 
@@ -55,6 +56,7 @@ export function AnswerButton({ label, neonColor, onPress, disabled, state = 'idl
 
   const handlePress = () => {
     hapticTap();
+    playSound('tap');
     onPress();
   };
 

@@ -5,48 +5,53 @@ import { hapticTap } from '../game/haptics';
 
 export type AnswerState = 'idle' | 'selected' | 'correct' | 'wrong' | 'dimmed';
 
+const useNative = Platform.OS !== 'web';
+
 interface Props {
   label: string;
-  colorIndex: number;
-  index: number; // position dans la grille (pour l'entrée en cascade)
+  neonColor: string; // couleur néon du thème de la question
   onPress: () => void;
   disabled?: boolean;
   state?: AnswerState;
 }
 
-const useNative = Platform.OS !== 'web';
+export function AnswerButton({ label, neonColor, onPress, disabled, state = 'idle' }: Props) {
+  const enter = useRef(new Animated.Value(0)).current;
+  const pop = useRef(new Animated.Value(1)).current;
 
-export function AnswerButton({ label, colorIndex, index, onPress, disabled, state = 'idle' }: Props) {
-  const enter = useRef(new Animated.Value(0)).current; // entrée en cascade au montage
-  const pop = useRef(new Animated.Value(1)).current; // pop bonne / mauvaise réponse
-
+  // Entrée (les 4 cases apparaissent en même temps).
   useEffect(() => {
-    Animated.timing(enter, {
-      toValue: 1,
-      duration: 260,
-      delay: index * 70,
-      useNativeDriver: useNative,
-    }).start();
-  }, [enter, index]);
+    Animated.spring(enter, { toValue: 1, friction: 6, tension: 80, useNativeDriver: useNative }).start();
+  }, [enter]);
 
+  // Pop au feedback juste / faux.
   useEffect(() => {
-    if (state === 'correct') {
+    if (state === 'correct' || state === 'wrong') {
       Animated.sequence([
-        Animated.timing(pop, { toValue: 1.06, duration: 130, useNativeDriver: useNative }),
-        Animated.spring(pop, { toValue: 1, friction: 4, useNativeDriver: useNative }),
-      ]).start();
-    } else if (state === 'wrong') {
-      Animated.sequence([
-        Animated.timing(pop, { toValue: 0.95, duration: 90, useNativeDriver: useNative }),
+        Animated.timing(pop, { toValue: state === 'correct' ? 1.05 : 0.96, duration: 110, useNativeDriver: useNative }),
         Animated.spring(pop, { toValue: 1, friction: 4, useNativeDriver: useNative }),
       ]).start();
     }
   }, [state, pop]);
 
-  let bg = theme.optionColors[colorIndex % theme.optionColors.length];
-  if (state === 'correct') bg = theme.correct;
-  else if (state === 'wrong') bg = theme.wrong;
-  else if (state === 'dimmed') bg = theme.surfaceAlt;
+  let borderColor = neonColor;
+  let bg = 'rgba(255,255,255,0.04)';
+  let textColor = '#fff';
+  let glow = neonColor;
+  if (state === 'correct') {
+    borderColor = theme.correct;
+    bg = theme.correct;
+    glow = theme.correct;
+  } else if (state === 'wrong') {
+    borderColor = theme.wrong;
+    bg = theme.wrong;
+    glow = theme.wrong;
+  } else if (state === 'dimmed') {
+    borderColor = theme.surfaceAlt;
+    bg = 'rgba(255,255,255,0.02)';
+    glow = 'transparent';
+    textColor = theme.textDim;
+  }
 
   const handlePress = () => {
     hapticTap();
@@ -57,27 +62,16 @@ export function AnswerButton({ label, colorIndex, index, onPress, disabled, stat
     <Animated.View
       style={{
         width: '100%',
-        opacity: enter,
-        transform: [
-          { translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) },
-          { scale: pop },
-        ],
+        opacity: state === 'dimmed' ? 0.5 : enter,
+        transform: [{ scale: Animated.multiply(enter.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }), pop) }],
       }}
     >
       <Pressable
         onPress={handlePress}
         disabled={disabled}
-        style={({ pressed }) => [
-          styles.btn,
-          {
-            backgroundColor: bg,
-            opacity: state === 'dimmed' ? 0.4 : pressed ? 0.85 : 1,
-            borderWidth: state === 'selected' ? 3 : 0,
-            borderColor: '#fff',
-          },
-        ]}
+        style={({ pressed }) => [styles.btn, { borderColor, backgroundColor: bg, shadowColor: glow, opacity: pressed ? 0.9 : 1 }]}
       >
-        <Text style={styles.label}>{label}</Text>
+        <Text style={[styles.label, { color: textColor }]}>{label}</Text>
       </Pressable>
     </Animated.View>
   );
@@ -85,12 +79,17 @@ export function AnswerButton({ label, colorIndex, index, onPress, disabled, stat
 
 const styles = StyleSheet.create({
   btn: {
-    borderRadius: 20,
+    borderRadius: 18,
+    borderWidth: 2,
     paddingVertical: 14,
     paddingHorizontal: 12,
-    minHeight: 112,
+    minHeight: 104,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowOpacity: 0.8,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 0 },
+    elevation: 6,
   },
-  label: { color: '#fff', fontSize: 16, fontFamily: theme.fonts.bold, textAlign: 'center' },
+  label: { fontSize: 16, fontFamily: theme.fonts.bold, textAlign: 'center' },
 });

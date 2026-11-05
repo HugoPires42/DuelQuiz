@@ -36,7 +36,7 @@ export function HomeScreen({ onDuelThemes, onAllThemes }: Props) {
           style={({ pressed }) => [styles.secondary, pressed && { opacity: 0.85 }]}
           onPress={onAllThemes}
         >
-          <Text style={styles.secondaryTxt}>TOUS LES THÈMES</Text>
+          <Text style={styles.secondaryTxt}>MIXUP</Text>
         </Pressable>
         <Text style={styles.modeHint}>Toutes les catégories mélangées</Text>
       </View>
@@ -78,8 +78,8 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: theme.surfaceAlt,
+    borderColor: theme.accent,
   },
-  secondaryTxt: { color: theme.text, fontSize: 16, fontFamily: theme.fonts.extraBold, letterSpacing: 1 },
+  secondaryTxt: { color: theme.accent, fontSize: 16, fontFamily: theme.fonts.extraBold, letterSpacing: 1 },
   modeHint: { color: theme.textDim, fontSize: 12, fontFamily: theme.fonts.medium, marginTop: 8, textAlign: 'center' },
 });

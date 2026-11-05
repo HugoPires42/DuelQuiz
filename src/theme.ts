@@ -1,18 +1,20 @@
 export const theme = {
-  bg: '#0E0B1E',
-  surface: '#1B1636',
-  surfaceAlt: '#272150',
-  text: '#F5F3FF',
-  textDim: '#A59FC9',
-  primary: '#7C4DFF',
-  primaryDark: '#5E35D6',
-  you: '#4DD0E1',
-  bot: '#FF7043',
-  correct: '#43D17A',
-  wrong: '#F04D6E',
-  streak: '#FFB300',
-  // Les 4 couleurs des boutons de réponse (style QuizUp)
-  optionColors: ['#5C6BC0', '#26A69A', '#EC407A', '#FFA726'],
+  bg: '#0A0E1F',
+  surface: '#141B33',
+  surfaceAlt: '#1E2746',
+  text: '#F2F5FF',
+  textDim: '#94A1C4',
+  // Identité : bleu + orange
+  primary: '#3B82F6', // bleu
+  primaryDark: '#2563EB',
+  accent: '#F97316', // orange
+  you: '#38BDF8', // joueur = bleu
+  bot: '#FB923C', // adversaire = orange
+  correct: '#34D399',
+  wrong: '#F43F5E',
+  streak: '#FBBF24',
+  // Ancienne palette des réponses (désormais : néon de la couleur du thème)
+  optionColors: ['#3B82F6', '#F97316', '#38BDF8', '#FBBF24'],
   // Famille typographique (Poppins), chargée dans App.tsx
   fonts: {
     black: 'Poppins_900Black',

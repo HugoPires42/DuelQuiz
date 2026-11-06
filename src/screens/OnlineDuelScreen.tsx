@@ -1,16 +1,21 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Platform, View, Text, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
 import { ThemedBackground } from '../components/ThemedBackground';
 import { Avatar } from '../components/Avatar';
 import { ScoreBar } from '../components/ScoreBar';
+import { ThemeBanner } from '../components/ThemeBanner';
+import { Countdown } from '../components/Countdown';
 import { AnswerButton, AnswerState } from '../components/AnswerButton';
 import { Match, listenMatch, leaveMatch } from '../online/match';
 import { useOnlineDuel, finalScores } from '../online/useOnlineDuel';
 import { QUESTION_TIME_MS } from '../game/scoring';
 import { categoryById } from '../game/categories';
 import { playSound } from '../game/sounds';
+import { hapticSuccess, hapticError } from '../game/haptics';
 import { Profile } from '../account/account';
 import { theme } from '../theme';
+
+const useNative = Platform.OS !== 'web';
 
 interface Props {
   matchId: string;
@@ -92,22 +97,65 @@ export function OnlineDuelScreen({ matchId, me, onLeave }: Props) {
   );
 }
 
-function OnlineDuelPlay({ matchId, match, myUid, onQuit }: { matchId: string; match: Match; myUid: string; onQuit: () => void }) {
+function OnlineDuelPlay({ matchId, match, myUid }: { matchId: string; match: Match; myUid: string; onQuit: () => void }) {
   const d = useOnlineDuel(matchId, match, myUid);
   const me = match.players[myUid];
   const opp = match.players[d.oppUid];
   const cat = d.question ? categoryById(d.question.categoryId) : undefined;
   const neon = cat?.neon ?? theme.primary;
-  const revealed = d.phase === 'reveal';
-  const feedback = d.mySelected != null || revealed;
-  const timePct = Math.max(0, Math.min(1, d.timeLeftMs / QUESTION_TIME_MS));
+  const label = cat?.label ?? '';
 
-  // Son instantané quand je réponds.
+  // Morph de la carte question (lecture grand/centré → réponse en haut) + chrome.
+  const qT = useRef(new Animated.Value(0)).current;
+  const chrome = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    if (d.mySelected == null || !d.question) return;
-    playSound(d.mySelected === d.question.correctIndex ? 'correct' : 'wrong');
+    if (d.phase === 'themeIntro' || d.phase === 'reading') {
+      qT.setValue(0);
+      Animated.timing(chrome, { toValue: 0, duration: 180, useNativeDriver: useNative }).start();
+    } else if (d.phase === 'playing' || d.phase === 'reveal') {
+      Animated.parallel([
+        Animated.timing(qT, { toValue: 1, duration: 520, easing: Easing.inOut(Easing.cubic), useNativeDriver: useNative }),
+        Animated.timing(chrome, { toValue: 1, duration: 420, delay: 160, useNativeDriver: useNative }),
+      ]).start();
+    }
+  }, [d.phase, qT, chrome]);
+
+  // Compte à rebours : tic sur 3-2-1, cloche sur GO.
+  useEffect(() => {
+    if (d.phase !== 'countdown') return;
+    if (d.countdownValue > 0) playSound('tick');
+    else playSound('bell');
+  }, [d.phase, d.countdownValue]);
+
+  // Swoosh à l'arrivée du thème.
+  useEffect(() => {
+    if (d.phase === 'themeIntro') playSound('swoosh');
+  }, [d.phase]);
+
+  // Feedback instantané (haptique + son) dès que je réponds.
+  const prevSel = useRef<number | null>(null);
+  useEffect(() => {
+    if (d.mySelected == null || !d.question) {
+      prevSel.current = null;
+      return;
+    }
+    if (prevSel.current === d.mySelected) return;
+    prevSel.current = d.mySelected;
+    if (d.mySelected === d.question.correctIndex) {
+      hapticSuccess();
+      playSound('correct');
+    } else {
+      hapticError();
+      playSound('wrong');
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [d.mySelected]);
+
+  // Son des points qui se remplissent à la révélation.
+  useEffect(() => {
+    if (d.phase === 'reveal') playSound('points');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [d.phase]);
 
   if (!d.question) {
     return (
@@ -118,13 +166,32 @@ function OnlineDuelPlay({ matchId, match, myUid, onQuit }: { matchId: string; ma
     );
   }
 
+  // Compte à rebours de début de match (3-2-1-GO).
+  if (d.phase === 'countdown') {
+    return (
+      <View style={styles.center}>
+        <ThemedBackground categoryId={d.question.categoryId} />
+        <Text style={styles.getReady}>Prépare-toi au combat…</Text>
+        <Countdown value={d.countdownValue} />
+      </View>
+    );
+  }
+
+  const revealed = d.phase === 'reveal';
+  const feedback = d.mySelected != null || revealed;
+  const showAnswers = d.phase === 'playing' || revealed;
+  const timePct = Math.max(0, Math.min(1, d.timeLeftMs / QUESTION_TIME_MS));
+
+  const translateY = qT.interpolate({ inputRange: [0, 1], outputRange: [240, 0] });
+  const scale = qT.interpolate({ inputRange: [0, 1], outputRange: [1.12, 1] });
+
   const cellState = (i: number): AnswerState => {
     if (!feedback) return 'idle';
     if (i === d.correctIndex) return 'correct';
     if (i === d.mySelected) return 'wrong';
     return 'dimmed';
   };
-  const cell = (i: number) => (
+  const renderCell = (i: number) => (
     <View key={i} style={styles.cell}>
       <AnswerButton label={d.question.options[i]} neonColor={neon} state={cellState(i)} disabled={feedback} onPress={() => d.onSelect(i)} />
     </View>
@@ -134,43 +201,57 @@ function OnlineDuelPlay({ matchId, match, myUid, onQuit }: { matchId: string; ma
     <View style={styles.playContainer}>
       <ThemedBackground categoryId={d.question.categoryId} />
 
-      <ScoreBar
-        you={{ name: me?.pseudo ?? 'Toi', score: d.myScore, streak: d.myStreak, color: theme.you }}
-        bot={{ name: opp?.pseudo ?? 'Adv.', score: d.oppScore, streak: d.oppStreak, color: theme.bot }}
-      />
+      {d.phase === 'themeIntro' && <ThemeBanner label={label} color={neon} />}
 
-      <View style={styles.progressWrap}>
-        <View style={styles.progressHead}>
-          <Text style={styles.qnum}>
-            Question {d.questionNumber}/{d.totalQuestions}
-          </Text>
-          {d.isLast && <Text style={styles.doubleBadge}>DERNIÈRE · POINTS ×2</Text>}
+      {/* Chrome : score + progression (fondu à l'entrée de la phase réponse) */}
+      <Animated.View style={{ opacity: chrome }}>
+        <ScoreBar
+          you={{ name: me?.pseudo ?? 'Toi', score: d.myScore, streak: d.myStreak, color: theme.you }}
+          bot={{ name: opp?.pseudo ?? 'Adv.', score: d.oppScore, streak: d.oppStreak, color: theme.bot }}
+        />
+        <View style={styles.progressWrap}>
+          <View style={styles.progressHead}>
+            <Text style={styles.qnum}>
+              Question {d.questionNumber}/{d.totalQuestions}
+            </Text>
+            {d.isLast && <Text style={styles.doubleBadge}>DERNIÈRE · POINTS ×2</Text>}
+          </View>
+          <View style={styles.timerTrack}>
+            <View style={[styles.timerFill, { width: `${timePct * 100}%`, backgroundColor: timePct < 0.3 ? theme.wrong : neon }]} />
+          </View>
         </View>
-        <View style={styles.timerTrack}>
-          <View style={[styles.timerFill, { width: `${timePct * 100}%`, backgroundColor: timePct < 0.3 ? theme.wrong : neon }]} />
-        </View>
-      </View>
+      </Animated.View>
 
-      <View style={[styles.qCard, { borderColor: `${neon}55` }]}>
-        <Text style={[styles.category, { color: neon }]}>{cat ? cat.label : ''}</Text>
-        <Text style={styles.prompt}>{d.question.prompt}</Text>
-      </View>
+      {/* Carte question : grande/centrée (lecture) → petite/en haut (réponse) */}
+      {d.phase !== 'themeIntro' && (
+        <Animated.View style={{ transform: [{ translateY }, { scale }] }}>
+          <View style={[styles.qCard, { borderColor: `${neon}55` }]}>
+            <Text style={[styles.category, { color: neon }]}>{label}</Text>
+            <Text style={styles.prompt}>{d.question.prompt}</Text>
+          </View>
+        </Animated.View>
+      )}
 
-      <View style={styles.answersWrap}>
-        <View style={styles.row}>
-          {cell(0)}
-          {cell(1)}
-        </View>
-        <View style={styles.row}>
-          {cell(2)}
-          {cell(3)}
-        </View>
-      </View>
+      {/* Réponses : 2 lignes qui remplissent la hauteur */}
+      {showAnswers && (
+        <Animated.View style={[styles.answersWrap, { opacity: chrome }]}>
+          <View style={styles.row}>
+            {renderCell(0)}
+            {renderCell(1)}
+          </View>
+          <View style={styles.row}>
+            {renderCell(2)}
+            {renderCell(3)}
+          </View>
+        </Animated.View>
+      )}
 
       {revealed && (
-        <Text style={styles.revealStatus}>
-          {d.oppSelected != null ? 'Manche terminée — question suivante…' : "En attente de l'adversaire…"}
-        </Text>
+        <View style={styles.revealOverlay} pointerEvents="none">
+          <Text style={styles.revealStatus}>
+            {d.oppSelected != null ? 'Manche terminée — question suivante…' : "En attente de l'adversaire…"}
+          </Text>
+        </View>
       )}
     </View>
   );
@@ -216,6 +297,7 @@ function OnlineResult({ match, me, onLeave }: { match: Match; me: Profile; onLea
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 28 },
+  getReady: { color: theme.textDim, fontSize: 20, fontFamily: theme.fonts.semiBold },
   title: { color: theme.text, fontSize: 34, fontFamily: theme.fonts.black, letterSpacing: 2, marginBottom: 28 },
 
   vsRow: { flexDirection: 'row', alignItems: 'center', gap: 18, marginBottom: 28 },
@@ -240,7 +322,8 @@ const styles = StyleSheet.create({
   answersWrap: { flex: 1, marginTop: 14 },
   row: { flexDirection: 'row', flex: 1 },
   cell: { flex: 1, margin: 6 },
-  revealStatus: { color: theme.textDim, fontSize: 13, fontFamily: theme.fonts.semiBold, textAlign: 'center', marginTop: 4 },
+  revealOverlay: { position: 'absolute', left: 0, right: 0, bottom: 24, alignItems: 'center' },
+  revealStatus: { color: theme.textDim, fontSize: 13, fontFamily: theme.fonts.semiBold, textAlign: 'center' },
 
   // Résultat
   verdict: { fontSize: 40, fontFamily: theme.fonts.black, letterSpacing: 1, marginBottom: 30 },

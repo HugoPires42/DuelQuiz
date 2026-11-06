@@ -43,8 +43,15 @@ export async function sendFriendRequest(me: Profile, input: string): Promise<voi
   if (!targetUid) throw new Error('Joueur introuvable.');
   if (targetUid === me.uid) throw new Error("Tu ne peux pas t'ajouter toi-même.");
 
-  const friendship = await getDoc(doc(fb.db, 'friendships', pairId(me.uid, targetUid)));
-  if (friendship.exists()) throw new Error('Vous êtes déjà amis.');
+  // Déjà amis ? Lire un document d'amitié INEXISTANT est refusé par les règles
+  // (resource == null) → on ignore cette erreur et on considère « pas encore amis ».
+  try {
+    const friendship = await getDoc(doc(fb.db, 'friendships', pairId(me.uid, targetUid)));
+    if (friendship.exists()) throw new Error('Vous êtes déjà amis.');
+  } catch (e) {
+    if (e instanceof Error && e.message === 'Vous êtes déjà amis.') throw e;
+    // sinon : lecture refusée / doc inexistant → on continue
+  }
 
   // id déterministe pour éviter les doublons de demande.
   await setDoc(doc(fb.db, 'friendRequests', `${me.uid}_${targetUid}`), {

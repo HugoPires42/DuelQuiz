@@ -12,9 +12,10 @@ import { theme } from '../theme';
 interface Props {
   profile: Profile | null;
   onBack: () => void;
+  onChallenge: (friend: Friend) => void;
 }
 
-export function FriendsScreen({ profile, onBack }: Props) {
+export function FriendsScreen({ profile, onBack, onChallenge }: Props) {
   const [input, setInput] = useState('');
   const [adding, setAdding] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -147,6 +148,9 @@ export function FriendsScreen({ profile, onBack }: Props) {
                 </Text>
                 <Text style={styles.rowSub}>Niveau {f.level}</Text>
               </View>
+              <Pressable style={styles.challenge} onPress={() => onChallenge(f)}>
+                <Text style={styles.challengeTxt}>Défier</Text>
+              </Pressable>
               <Pressable style={styles.remove} onPress={() => remove(f.uid)}>
                 <Text style={styles.removeTxt}>Retirer</Text>
               </Pressable>
@@ -184,6 +188,8 @@ const styles = StyleSheet.create({
   acceptTxt: { color: '#06281b', fontSize: 12, fontFamily: theme.fonts.black },
   decline: { paddingVertical: 7, paddingHorizontal: 8 },
   declineTxt: { color: theme.textDim, fontSize: 12, fontFamily: theme.fonts.bold },
-  remove: { paddingVertical: 7, paddingHorizontal: 10 },
+  challenge: { backgroundColor: theme.primary, borderRadius: 999, paddingVertical: 7, paddingHorizontal: 14 },
+  challengeTxt: { color: '#fff', fontSize: 12, fontFamily: theme.fonts.black },
+  remove: { paddingVertical: 7, paddingHorizontal: 8 },
   removeTxt: { color: theme.wrong, fontSize: 12, fontFamily: theme.fonts.bold },
 });

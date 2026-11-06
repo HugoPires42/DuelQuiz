@@ -14,13 +14,16 @@ import { DuelScreen, Matchup } from './src/screens/DuelScreen';
 import { ProfileScreen } from './src/screens/ProfileScreen';
 import { AvatarScreen } from './src/screens/AvatarScreen';
 import { FriendsScreen } from './src/screens/FriendsScreen';
+import { OnlineDuelScreen } from './src/screens/OnlineDuelScreen';
 import { categoryLabel, randomCategory } from './src/game/categories';
 import { ensureSignedIn, ensureProfile, Profile } from './src/account/account';
+import { Friend } from './src/account/friends';
+import { createFriendMatch, acceptMatchInvite, declineMatchInvite, listenMatchInvites, MatchInvite } from './src/online/match';
 import { initSounds } from './src/game/sounds';
 import { theme } from './src/theme';
 
 const useNative = Platform.OS !== 'web';
-type Screen = 'home' | 'theme' | 'duel' | 'profile' | 'avatar' | 'friends';
+type Screen = 'home' | 'theme' | 'duel' | 'profile' | 'avatar' | 'friends' | 'onlineDuel';
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -35,6 +38,8 @@ export default function App() {
   const [categoryIds, setCategoryIds] = useState<string[] | undefined>(undefined);
   const [matchup, setMatchup] = useState<Matchup | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [matchId, setMatchId] = useState<string | null>(null);
+  const [invites, setInvites] = useState<MatchInvite[]>([]);
 
   // Fondu enchaîné à chaque changement d'écran.
   const fade = useRef(new Animated.Value(0)).current;
@@ -59,6 +64,33 @@ export default function App() {
       }
     })();
   }, []);
+
+  // Écoute en temps réel des invitations à un duel.
+  useEffect(() => {
+    if (!profile) return;
+    return listenMatchInvites(profile.uid, setInvites);
+  }, [profile]);
+
+  const challenge = async (friend: Friend) => {
+    if (!profile) return;
+    try {
+      const id = await createFriendMatch(profile, friend);
+      setMatchId(id);
+      setScreen('onlineDuel');
+    } catch {
+      // ignore
+    }
+  };
+
+  const acceptInvite = async (inv: MatchInvite) => {
+    try {
+      const id = await acceptMatchInvite(inv);
+      setMatchId(id);
+      setScreen('onlineDuel');
+    } catch {
+      // ignore
+    }
+  };
 
   // Mode « Tous les thèmes » : toutes les catégories mélangées.
   const startAllThemes = () => {
@@ -89,6 +121,9 @@ export default function App() {
             onProfile={() => setScreen('profile')}
             onDuelThemes={() => setScreen('theme')}
             onAllThemes={startAllThemes}
+            invites={invites}
+            onAcceptInvite={acceptInvite}
+            onDeclineInvite={declineMatchInvite}
           />
         )}
         {screen === 'theme' && <CategoryScreen onPick={pickYourTheme} onBack={() => setScreen('home')} />}
@@ -107,7 +142,19 @@ export default function App() {
         {screen === 'avatar' && (
           <AvatarScreen profile={profile} onBack={() => setScreen('profile')} onChange={setProfile} />
         )}
-        {screen === 'friends' && <FriendsScreen profile={profile} onBack={() => setScreen('home')} />}
+        {screen === 'friends' && (
+          <FriendsScreen profile={profile} onBack={() => setScreen('home')} onChallenge={challenge} />
+        )}
+        {screen === 'onlineDuel' && matchId && profile && (
+          <OnlineDuelScreen
+            matchId={matchId}
+            me={profile}
+            onLeave={() => {
+              setMatchId(null);
+              setScreen('home');
+            }}
+          />
+        )}
       </Animated.View>
     </SafeAreaView>
   );

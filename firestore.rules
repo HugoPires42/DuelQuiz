@@ -23,27 +23,43 @@ service cloud.firestore {
 
     // ───── Demandes d'amis ─────
     match /friendRequests/{id} {
-      // Lisible par l'expéditeur et le destinataire.
       allow read: if request.auth != null &&
         (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
-      // On n'envoie une demande qu'EN SON NOM, et pas à soi-même.
       allow create: if request.auth != null &&
         request.resource.data.from == request.auth.uid &&
         request.resource.data.to != request.auth.uid;
-      // Accepter / refuser / annuler : l'un des deux concernés.
       allow update, delete: if request.auth != null &&
         (resource.data.to == request.auth.uid || resource.data.from == request.auth.uid);
     }
 
-    // ───── Amitiés (document partagé par les 2 joueurs) ─────
+    // ───── Amitiés ─────
     match /friendships/{pairId} {
       allow read: if request.auth != null && request.auth.uid in resource.data.users;
-      // Créable uniquement par un des 2 participants, avec exactement 2 membres.
       allow create: if request.auth != null &&
         request.auth.uid in request.resource.data.users &&
         request.resource.data.users.size() == 2;
       allow delete: if request.auth != null && request.auth.uid in resource.data.users;
       allow update: if false;
+    }
+
+    // ───── Invitations à un duel ─────
+    match /matchInvites/{id} {
+      allow read: if request.auth != null &&
+        (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
+      allow create: if request.auth != null && request.resource.data.from == request.auth.uid;
+      allow delete: if request.auth != null &&
+        (resource.data.to == request.auth.uid || resource.data.from == request.auth.uid);
+    }
+
+    // ───── Parties (duel temps réel) ─────
+    match /matches/{matchId} {
+      allow read: if request.auth != null && request.auth.uid in resource.data.playerIds;
+      // Créable uniquement par l'hôte, qui doit faire partie des joueurs.
+      allow create: if request.auth != null &&
+        request.resource.data.host == request.auth.uid &&
+        request.auth.uid in request.resource.data.playerIds;
+      // Les 2 joueurs peuvent mettre à jour (réponses, avancement) et quitter.
+      allow update, delete: if request.auth != null && request.auth.uid in resource.data.playerIds;
     }
 
     // Tout le reste est refusé par défaut (aucune règle = accès refusé).

@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { ThemedBackground } from '../components/ThemedBackground';
 import { Avatar } from '../components/Avatar';
 import { AvatarConfig } from '../avatar/types';
+import { MatchInvite } from '../online/match';
 import { isMuted, setMuted, playSound } from '../game/sounds';
 import { theme } from '../theme';
 
@@ -11,9 +12,12 @@ interface Props {
   onProfile: () => void;
   onDuelThemes: () => void;
   onAllThemes: () => void;
+  invites?: MatchInvite[];
+  onAcceptInvite?: (inv: MatchInvite) => void;
+  onDeclineInvite?: (id: string) => void;
 }
 
-export function HomeScreen({ profile, onProfile, onDuelThemes, onAllThemes }: Props) {
+export function HomeScreen({ profile, onProfile, onDuelThemes, onAllThemes, invites, onAcceptInvite, onDeclineInvite }: Props) {
   const [soundOn, setSoundOn] = useState(!isMuted());
   const toggleSound = () => {
     const next = !soundOn;
@@ -37,6 +41,22 @@ export function HomeScreen({ profile, onProfile, onDuelThemes, onAllThemes }: Pr
         <View style={[styles.soundDot, { backgroundColor: soundOn ? theme.correct : theme.textDim }]} />
         <Text style={styles.soundTxt}>{soundOn ? 'Son activé' : 'Son coupé'}</Text>
       </Pressable>
+
+      {invites && invites.length > 0 && (
+        <View style={styles.inviteBanner}>
+          <Avatar config={invites[0].fromAvatar} size={34} />
+          <Text style={styles.inviteTxt} numberOfLines={1}>
+            {invites[0].fromPseudo}#{invites[0].fromTag} te défie !
+          </Text>
+          <Pressable style={styles.inviteAccept} onPress={() => onAcceptInvite?.(invites[0])}>
+            <Text style={styles.inviteAcceptTxt}>Jouer</Text>
+          </Pressable>
+          <Pressable style={styles.inviteDecline} onPress={() => onDeclineInvite?.(invites[0].id)}>
+            <Text style={styles.inviteDeclineTxt}>Refuser</Text>
+          </Pressable>
+        </View>
+      )}
+
       <Text style={styles.logo}>QuizDuel</Text>
       <Text style={styles.tagline}>
         Défie le bot en 1 contre 1.{'\n'}Le plus rapide marque le plus de points.
@@ -93,6 +113,26 @@ const styles = StyleSheet.create({
     backgroundColor: theme.surface,
   },
   profileDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: theme.primary },
+  inviteBanner: {
+    position: 'absolute',
+    top: 56,
+    left: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: theme.surface,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: theme.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+  },
+  inviteTxt: { color: theme.text, fontSize: 13, fontFamily: theme.fonts.bold, flex: 1 },
+  inviteAccept: { backgroundColor: theme.primary, borderRadius: 999, paddingVertical: 7, paddingHorizontal: 14 },
+  inviteAcceptTxt: { color: '#fff', fontSize: 12, fontFamily: theme.fonts.black },
+  inviteDecline: { paddingVertical: 7, paddingHorizontal: 6 },
+  inviteDeclineTxt: { color: theme.textDim, fontSize: 12, fontFamily: theme.fonts.bold },
   profileTxt: { color: theme.text, fontSize: 12, fontFamily: theme.fonts.bold },
   soundToggle: {
     position: 'absolute',
